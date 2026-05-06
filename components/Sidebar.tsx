@@ -1,20 +1,27 @@
 "use client";
 
-import { LayoutDashboard, Calendar, Users, Mail, BookOpen, Lightbulb, Wallet, MessageSquare, Building2 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard, Calendar, Users, Mail,
+  BookOpen, Lightbulb, Wallet, MessageSquare, Building2,
+} from "lucide-react";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: Calendar, label: "Events", active: false },
-  { icon: Building2, label: "Leveranciers", active: false },
-  { icon: Users, label: "Gasten", active: false },
-  { icon: BookOpen, label: "Draaiboeken", active: false },
-  { icon: Mail, label: "Mailgenerator", active: false },
-  { icon: Lightbulb, label: "Brainstorm", active: false },
-  { icon: Wallet, label: "Budget", active: false },
-  { icon: MessageSquare, label: "Vergaderingen", active: false },
+  { icon: LayoutDashboard, label: "Dashboard",     href: "/" },
+  { icon: Calendar,        label: "Events",         href: "/events" },
+  { icon: Building2,       label: "Leveranciers",   href: "/leveranciers" },
+  { icon: Users,           label: "Gasten",         href: "/gasten" },
+  { icon: BookOpen,        label: "Draaiboeken",    href: "/draaiboeken" },
+  { icon: Mail,            label: "Mailgenerator",  href: "/mail" },
+  { icon: Lightbulb,       label: "Brainstorm",     href: "/brainstorm" },
+  { icon: Wallet,          label: "Budget",         href: "/budget" },
+  { icon: MessageSquare,   label: "Vergaderingen",  href: "/vergaderingen" },
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside
       className="flex flex-col h-full w-64 shrink-0"
@@ -22,7 +29,7 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="px-6 py-8 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-        <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
             style={{ backgroundColor: "var(--accent)", color: "#fff" }}
@@ -37,28 +44,32 @@ export default function Sidebar() {
               Werkplek
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-6 space-y-1">
-        {navItems.map((item) => (
-          <button
-            key={item.label}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left"
-            style={
-              item.active
-                ? { backgroundColor: "rgba(232,111,163,0.18)", color: "var(--accent)" }
-                : { color: "rgba(232,228,220,0.6)" }
-            }
-          >
-            <item.icon
-              size={16}
-              style={{ color: item.active ? "var(--accent)" : "rgba(232,228,220,0.4)" }}
-            />
-            {item.label}
-          </button>
-        ))}
+        {navItems.map((item) => {
+          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+              style={
+                active
+                  ? { backgroundColor: "rgba(232,111,163,0.18)", color: "var(--accent)" }
+                  : { color: "rgba(232,228,220,0.6)" }
+              }
+            >
+              <item.icon
+                size={16}
+                style={{ color: active ? "var(--accent)" : "rgba(232,228,220,0.4)" }}
+              />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Bottom user area */}

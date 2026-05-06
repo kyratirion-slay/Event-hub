@@ -1,74 +1,29 @@
 import Sidebar from "@/components/Sidebar";
 import EventCard, { type Event } from "@/components/EventCard";
+import { events as allEvents } from "@/lib/mockData";
 import { Plus, Search, Bell, Filter } from "lucide-react";
 
-const fakeEvents: Event[] = [
-  {
-    id: 1,
-    name: "Strategie Offsite — Q3 Leadership",
-    date: "12 juni 2025",
-    location: "Het Scheepvaartmuseum, Amsterdam",
-    guests: 34,
-    status: "bevestigd",
-    type: "Corporate Retreat",
-    coverColor: "#e86fa3",
-  },
-  {
-    id: 2,
-    name: "Zomerborrel Tech & Talent",
-    date: "27 juni 2025",
-    location: "Rooftop NDSM, Amsterdam-Noord",
-    guests: 120,
-    status: "in voorbereiding",
-    type: "Netwerkevent",
-    coverColor: "#6e9fc8",
-  },
-  {
-    id: 3,
-    name: "Jaarlijks Klantendiner 2025",
-    date: "18 september 2025",
-    location: "Restaurant De Kas, Amsterdam",
-    guests: 48,
-    status: "concept",
-    type: "Corporate Dinner",
-    coverColor: "#a96ec8",
-  },
-  {
-    id: 4,
-    name: "Productlancering 'Nova'",
-    date: "4 oktober 2025",
-    location: "Westergasfabriek, Amsterdam",
-    guests: 280,
-    status: "in voorbereiding",
-    type: "Lancering",
-    coverColor: "#c86e6e",
-  },
-  {
-    id: 5,
-    name: "Team Retreat — Winter Edition",
-    date: "5 december 2025",
-    location: "Landgoed De Witte Berken, Drenthe",
-    guests: 22,
-    status: "concept",
-    type: "Team Retreat",
-    coverColor: "#6ec8b4",
-  },
-  {
-    id: 6,
-    name: "Nieuwjaarsreceptie 2025",
-    date: "10 januari 2025",
-    location: "Stadsschouwburg, Amsterdam",
-    guests: 195,
-    status: "afgerond",
-    type: "Receptie",
-    coverColor: "#8b8a7a",
-  },
-];
+const dashboardEvents: Event[] = allEvents.map((e) => ({
+  id: e.id,
+  name: e.name,
+  date: e.date,
+  location: e.location,
+  guests: e.guests,
+  status: e.status,
+  type: e.type,
+  coverColor: e.coverColor,
+}));
+
+const openTodosTotal = allEvents.reduce(
+  (sum, e) => sum + e.todos.filter((t) => t.status !== "done").length,
+  0
+);
+const activeCount = allEvents.filter((e) => e.status !== "afgerond").length;
 
 const stats = [
-  { label: "Actieve events",       value: "5",  sub: "1 bevestigd" },
-  { label: "Komende 30 dagen",     value: "2",  sub: "Zomerborrel & Offsite" },
-  { label: "Openstaande taken",    value: "12", sub: "Verspreid over 5 events" },
+  { label: "Actieve events",    value: String(activeCount), sub: "1 bevestigd" },
+  { label: "Komende 30 dagen",  value: "2",                 sub: "Zomerborrel & Offsite" },
+  { label: "Openstaande taken", value: String(openTodosTotal), sub: "Verspreid over actieve events" },
 ];
 
 export default function DashboardPage() {
@@ -151,7 +106,7 @@ export default function DashboardPage() {
 
           {/* Cards */}
           <div className="grid grid-cols-3 gap-4">
-            {fakeEvents.map((event) => (
+            {dashboardEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>

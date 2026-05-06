@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { MapPin, Users, Calendar, ArrowRight } from "lucide-react";
 
 type Status = "in voorbereiding" | "bevestigd" | "afgerond" | "concept";
@@ -26,8 +27,9 @@ export default function EventCard({ event }: { event: Event }) {
   const status = statusConfig[event.status];
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+    <Link
+      href={`/events/${event.id}`}
+      className="rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg block"
       style={{
         backgroundColor: "var(--card)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)",
@@ -83,7 +85,7 @@ export default function EventCard({ event }: { event: Event }) {
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
