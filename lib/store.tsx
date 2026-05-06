@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { events as initialEvents } from "./mockData";
 import type {
-  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status,
+  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status, NoteWindow,
 } from "./types";
 
 interface StoreContextType {
@@ -30,6 +30,10 @@ interface StoreContextType {
   addBudgetItem(eventId: number, categoryId: number): void;
   updateBudgetItem(eventId: number, categoryId: number, itemId: number, updates: Partial<Omit<BudgetLineItem, "id">>): void;
   deleteBudgetItem(eventId: number, categoryId: number, itemId: number): void;
+  // Note windows
+  addNoteWindow(eventId: number, win: Omit<NoteWindow, "id">): void;
+  updateNoteWindow(eventId: number, winId: number, updates: Partial<Omit<NoteWindow, "id">>): void;
+  deleteNoteWindow(eventId: number, winId: number): void;
   // Timeline
   toggleTimelineItem(eventId: number, itemId: number): void;
   addTimelineItem(eventId: number, item: Omit<TimelineItem, "id">): void;
@@ -229,6 +233,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const addNoteWindow = useCallback((eventId: number, win: Omit<NoteWindow, "id">) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => {
+        const windows = e.noteWindows ?? [];
+        return { ...e, noteWindows: [...windows, { ...win, id: nextId(windows) }] };
+      })
+    );
+  }, []);
+
+  const updateNoteWindow = useCallback((eventId: number, winId: number, updates: Partial<Omit<NoteWindow, "id">>) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        noteWindows: (e.noteWindows ?? []).map((w) => (w.id === winId ? { ...w, ...updates } : w)),
+      }))
+    );
+  }, []);
+
+  const deleteNoteWindow = useCallback((eventId: number, winId: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        noteWindows: (e.noteWindows ?? []).filter((w) => w.id !== winId),
+      }))
+    );
+  }, []);
+
   const toggleTimelineItem = useCallback((eventId: number, itemId: number) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
@@ -283,6 +314,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateBriefingField,
       updateTotalBudget, addBudgetCategory, renameBudgetCategory, deleteBudgetCategory,
       addBudgetItem, updateBudgetItem, deleteBudgetItem,
+      addNoteWindow, updateNoteWindow, deleteNoteWindow,
       toggleTimelineItem, addTimelineItem, updateTimelineItem, deleteTimelineItem, adoptSuggestion,
     }}>
       {children}

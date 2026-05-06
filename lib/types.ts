@@ -18,7 +18,7 @@ export interface BudgetLineItem {
   id: number;
   description: string;
   amountExclVat: number;
-  vatRate: number; // percentage, e.g. 21
+  vatRate: number;
 }
 
 export interface BudgetCategory {
@@ -48,6 +48,18 @@ export interface EventBriefing {
   vrijeNotities: string;
 }
 
+export interface NoteWindow {
+  id: number;
+  title: string;
+  content: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+}
+
 export interface Event {
   id: number;
   name: string;
@@ -65,4 +77,5 @@ export interface Event {
   todos: Todo[];
   budgetCategories: BudgetCategory[];
   timeline: TimelineItem[];
+  noteWindows?: NoteWindow[];
 }

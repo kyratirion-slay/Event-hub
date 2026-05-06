@@ -7,12 +7,12 @@ import { use } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useStore } from "@/lib/store";
 import { generateSuggestions } from "@/lib/suggestions";
-import type { EventBriefing, TimelineItem } from "@/lib/types";
+import type { EventBriefing, TimelineItem, NoteWindow } from "@/lib/types";
 import {
   ArrowLeft, ChevronRight, Plus, Trash2, GripVertical,
   CheckCircle2, Circle, CheckCheck, AlertCircle,
   MapPin, Users, Clock, ChevronDown, ChevronUp,
-  Sparkles, Pencil, Check, X,
+  Sparkles, Pencil, Check, X, StickyNote,
 } from "lucide-react";
 
 // ─── INLINE EDIT ─────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ const statusConfig = {
   concept:            { label: "Concept",            bg: "rgba(167,139,250,0.12)", text: "#5b21b6", dot: "#8b5cf6" },
 } as const;
 
-const TABS = ["Programma", "To do's", "Uitwerking", "Budget", "Tijdlijn"] as const;
+const TABS = ["Programma", "To do's", "Uitwerking", "Budget", "Tijdlijn", "Notities"] as const;
 type Tab = typeof TABS[number];
 
 function formatEuro(n: number) {
@@ -1007,6 +1007,309 @@ function TijdlijnTab({ eventId }: { eventId: number }) {
   );
 }
 
+// ─── NOTITIES TAB ─────────────────────────────────────────────────────────
+
+const NOTE_COLORS = [
+  "#e86fa3", "#6e9fc8", "#a96ec8", "#6ec8b4",
+  "#f59e0b", "#c86e6e", "#6dba8a", "#8b8a7a",
+];
+
+const NOTE_PRESETS = [
+  { title: "Locatienotities",       color: "#6e9fc8" },
+  { title: "Sprekersnotities",      color: "#a96ec8" },
+  { title: "Last-minute updates",   color: "#c86e6e" },
+  { title: "Open vragen",           color: "#f59e0b" },
+  { title: "Cateringnotities",      color: "#6ec8b4" },
+  { title: "Algemeen",              color: "#8b8a7a" },
+];
+
+function FloatingNoteWindow({
+  win,
+  eventId,
+  onFocus,
+}: {
+  win: NoteWindow;
+  eventId: number;
+  onFocus(): void;
+}) {
+  const store = useStore();
+  const divRef = useRef<HTMLDivElement>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(win.title);
+  const [showColors, setShowColors] = useState(false);
+
+  function startDrag(e: React.MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (target.closest("button,textarea,input")) return;
+    e.preventDefault();
+    onFocus();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = win.x;
+    const origY = win.y;
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    function onMove(e: MouseEvent) {
+      const nx = Math.max(0, origX + e.clientX - startX);
+      const ny = Math.max(0, origY + e.clientY - startY);
+      if (divRef.current) { divRef.current.style.left = `${nx}px`; divRef.current.style.top = `${ny}px`; }
+    }
+    function onUp(e: MouseEvent) {
+      store.updateNoteWindow(eventId, win.id, {
+        x: Math.max(0, origX + e.clientX - startX),
+        y: Math.max(0, origY + e.clientY - startY),
+      });
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origW = win.width;
+    const origH = win.height;
+    document.body.style.cursor = "se-resize";
+    document.body.style.userSelect = "none";
+    function onMove(e: MouseEvent) {
+      const nw = Math.max(260, origW + e.clientX - startX);
+      const nh = Math.max(160, origH + e.clientY - startY);
+      if (divRef.current) { divRef.current.style.width = `${nw}px`; divRef.current.style.height = `${nh}px`; }
+    }
+    function onUp(e: MouseEvent) {
+      store.updateNoteWindow(eventId, win.id, {
+        width: Math.max(260, origW + e.clientX - startX),
+        height: Math.max(160, origH + e.clientY - startY),
+      });
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  return (
+    <div
+      ref={divRef}
+      onMouseDown={onFocus}
+      style={{
+        position: "absolute",
+        left: win.x, top: win.y,
+        width: win.width, height: win.height,
+        zIndex: win.zIndex,
+        borderRadius: 14,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        boxShadow: "0 6px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06)",
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--card)",
+      }}
+    >
+      {/* Header / drag handle */}
+      <div
+        onMouseDown={startDrag}
+        style={{
+          backgroundColor: win.color,
+          padding: "9px 12px",
+          cursor: "grab",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          userSelect: "none",
+          flexShrink: 0,
+        }}
+      >
+        {editingTitle ? (
+          <input
+            autoFocus
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={() => { store.updateNoteWindow(eventId, win.id, { title: titleDraft || "Venster" }); setEditingTitle(false); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { store.updateNoteWindow(eventId, win.id, { title: titleDraft || "Venster" }); setEditingTitle(false); } }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 bg-transparent outline-none text-sm font-semibold"
+            style={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.5)" }}
+          />
+        ) : (
+          <span
+            className="flex-1 text-sm font-semibold truncate"
+            style={{ color: "#fff" }}
+            onDoubleClick={(e) => { e.stopPropagation(); setTitleDraft(win.title); setEditingTitle(true); }}
+            title="Dubbelklik om naam te wijzigen"
+          >
+            {win.title}
+          </span>
+        )}
+
+        {/* Color picker */}
+        <div className="relative shrink-0">
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setShowColors((v) => !v)}
+            className="w-4 h-4 rounded-full border-2"
+            style={{ backgroundColor: win.color, borderColor: "rgba(255,255,255,0.5)" }}
+            title="Kleur wijzigen"
+          />
+          {showColors && (
+            <div
+              className="absolute right-0 top-6 z-50 flex gap-1.5 p-2 rounded-lg"
+              style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {NOTE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => { store.updateNoteWindow(eventId, win.id, { color: c }); setShowColors(false); }}
+                  className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                  style={{ backgroundColor: c, outline: win.color === c ? `2px solid ${c}` : "none", outlineOffset: 2 }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Close */}
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => store.deleteNoteWindow(eventId, win.id)}
+          className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+          style={{ color: "#fff" }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Content */}
+      <textarea
+        value={win.content}
+        onChange={(e) => store.updateNoteWindow(eventId, win.id, { content: e.target.value })}
+        placeholder="Schrijf hier je notities..."
+        className="flex-1 resize-none outline-none px-4 py-3 text-sm"
+        style={{
+          backgroundColor: "var(--card)",
+          color: "var(--foreground)",
+          lineHeight: 1.75,
+        }}
+      />
+
+      {/* Resize handle */}
+      <div
+        onMouseDown={startResize}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          right: 0,
+          width: 18,
+          height: 18,
+          cursor: "se-resize",
+          background: `linear-gradient(135deg, transparent 50%, var(--border) 50%)`,
+          borderRadius: "0 0 14px 0",
+        }}
+      />
+    </div>
+  );
+}
+
+function NotitiesTab({ eventId }: { eventId: number }) {
+  const store = useStore();
+  const event = store.events.find((e) => e.id === eventId)!;
+  const windows = event.noteWindows ?? [];
+  const [showPresets, setShowPresets] = useState(false);
+
+  function addWindow(title: string, color: string) {
+    const stagger = windows.length;
+    const maxZ = windows.reduce((m, w) => Math.max(m, w.zIndex), 0);
+    store.addNoteWindow(eventId, {
+      title,
+      content: "",
+      color,
+      x: 24 + (stagger * 36) % 280,
+      y: 24 + (stagger * 36) % 180,
+      width: 340,
+      height: 280,
+      zIndex: maxZ + 1,
+    });
+    setShowPresets(false);
+  }
+
+  function bringToFront(winId: number) {
+    const maxZ = windows.reduce((m, w) => Math.max(m, w.zIndex), 0);
+    store.updateNoteWindow(eventId, winId, { zIndex: maxZ + 1 });
+  }
+
+  return (
+    <div className="relative h-full" style={{ backgroundColor: "var(--background)" }}>
+      {windows.map((win) => (
+        <FloatingNoteWindow
+          key={win.id}
+          win={win}
+          eventId={eventId}
+          onFocus={() => bringToFront(win.id)}
+        />
+      ))}
+
+      {/* Empty state */}
+      {windows.length === 0 && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none"
+          style={{ color: "var(--muted)" }}
+        >
+          <StickyNote size={40} className="mb-4 opacity-30" />
+          <p className="text-sm font-medium mb-1">Nog geen notitievensters</p>
+          <p className="text-xs opacity-70">Gebruik de knop rechtsonder om te beginnen</p>
+        </div>
+      )}
+
+      {/* Add button (floating, bottom-right) */}
+      <div className="absolute bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        {showPresets && (
+          <div
+            className="rounded-xl overflow-hidden mb-1"
+            style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 200 }}
+          >
+            {NOTE_PRESETS.map((p) => (
+              <button
+                key={p.title}
+                onClick={() => addWindow(p.title, p.color)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:opacity-80 transition-opacity text-left"
+                style={{ borderBottom: "1px solid var(--border)", color: "var(--foreground)" }}
+              >
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                {p.title}
+              </button>
+            ))}
+            <button
+              onClick={() => addWindow("Nieuw venster", NOTE_COLORS[windows.length % NOTE_COLORS.length])}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:opacity-80 transition-opacity text-left"
+              style={{ color: "var(--muted)" }}
+            >
+              <Plus size={13} />
+              Leeg venster
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setShowPresets((v) => !v)}
+          className="flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold shadow-lg transition-all"
+          style={{ backgroundColor: "var(--foreground)", color: "var(--accent-light)", boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}
+        >
+          <Plus size={16} /> Venster
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── PAGE ─────────────────────────────────────────────────────────────────
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -1021,8 +1324,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const openTodos = event.todos.filter((t) => t.status !== "done");
 
   // Full-width tabs (no summary sidebar)
-  const fullWidthTabs: Tab[] = ["Uitwerking", "Budget", "Tijdlijn"];
+  const fullWidthTabs: Tab[] = ["Uitwerking", "Budget", "Tijdlijn", "Notities"];
   const isFullWidth = fullWidthTabs.includes(activeTab);
+  const isCanvas = activeTab === "Notities";
 
   return (
     <div className="flex h-full min-h-screen">
@@ -1177,11 +1481,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         </header>
 
         {/* ── Content ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 ${isCanvas ? "overflow-hidden" : "overflow-y-auto"}`}>
           <div className="flex h-full">
             {/* Main content */}
             <div
-              className="flex-1 px-8 py-6 min-w-0"
+              className={`flex-1 min-w-0 ${isCanvas ? "" : "px-8 py-6"}`}
               style={{ maxWidth: isFullWidth ? "100%" : undefined }}
             >
               {activeTab === "Programma"  && <ProgrammaTab eventId={event.id} />}
@@ -1189,6 +1493,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               {activeTab === "Uitwerking" && <UitwerkingTab eventId={event.id} />}
               {activeTab === "Budget"     && <BudgetTab eventId={event.id} />}
               {activeTab === "Tijdlijn"   && <TijdlijnTab eventId={event.id} />}
+              {activeTab === "Notities"   && <NotitiesTab eventId={event.id} />}
             </div>
 
             {/* Right sidebar — only for Programma and Todos */}
