@@ -1,61 +1,9 @@
-export type Status = "in voorbereiding" | "bevestigd" | "afgerond" | "concept";
+export type {
+  Status, ProgramItem, Todo, BudgetLineItem, BudgetCategory,
+  TimelineItem, EventBriefing, Event,
+} from "./types";
 
-export interface ProgramItem {
-  time: string;
-  title: string;
-  notes?: string;
-}
-
-export interface Todo {
-  id: number;
-  text: string;
-  status: "open" | "in progress" | "done";
-  deadline?: string;
-  category: string;
-}
-
-export interface BudgetItem {
-  category: string;
-  estimated: number;
-  actual: number;
-}
-
-export interface TimelineItem {
-  date: string;
-  title: string;
-  done: boolean;
-  linkedTodoId?: number;
-}
-
-export interface Contact {
-  name: string;
-  role: string;
-  phone?: string;
-  email?: string;
-}
-
-export interface Event {
-  id: number;
-  name: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  guests: number;
-  status: Status;
-  type: string;
-  coverColor: string;
-  concept?: string;
-  audience?: string;
-  theme?: string;
-  format?: string;
-  notes?: string;
-  program: ProgramItem[];
-  todos: Todo[];
-  budget: BudgetItem[];
-  timeline: TimelineItem[];
-  contacts: Contact[];
-}
+import type { Event } from "./types";
 
 export const events: Event[] = [
   {
@@ -69,11 +17,18 @@ export const events: Event[] = [
     status: "bevestigd",
     type: "Corporate Retreat",
     coverColor: "#e86fa3",
-    concept: "Een volledige dag buiten de kantooromgeving voor het leadership team. Focus op strategie Q3/Q4, teamcohesie en besluitvorming. Rustige, geconcentreerde sfeer met ruimte voor verdieping.",
-    audience: "34 directeuren en senior managers",
-    theme: "Focus & Richting — weg van de waan van de dag",
-    format: "Plenaire sessies afgewisseld met groepsworkshops, lunch met vrije tafelindeling, afsluiting met borrel",
-    notes: "",
+    totalBudget: 10350,
+    briefing: {
+      concept: "Een volledige dag buiten de kantooromgeving voor het leadership team. Focus op strategie Q3/Q4, teamcohesie en besluitvorming. Rustige, geconcentreerde sfeer met ruimte voor verdieping.",
+      doelgroep: "34 directeuren en senior managers",
+      sfeerThema: "Focus & Richting — weg van de waan van de dag",
+      format: "Plenaire sessies afgewisseld met groepsworkshops, lunch met vrije tafelindeling, afsluiting met borrel",
+      bijzonderheden: "",
+      dresscode: "Smart casual",
+      cateringWensen: "Lunch buffet, doorlopende koffie & thee, borrelsnacks vanaf 17:45",
+      avTechniek: "Beamer, draadloze microfoon, flip-overs per breakoutruimte",
+      vrijeNotities: "",
+    },
     program: [
       { time: "09:30", title: "Inloop & koffie" },
       { time: "10:00", title: "Opening door CEO", notes: "Max 20 min, toon zetten" },
@@ -88,34 +43,51 @@ export const events: Event[] = [
     todos: [
       { id: 1, text: "Offerte catering bevestigen", status: "done", deadline: "15 mei", category: "Catering" },
       { id: 2, text: "AV-setup controleren met venue", status: "done", deadline: "1 juni", category: "Locatie" },
-      { id: 3, text: "Programmaboekje naar drukker", status: "in progress", deadline: "5 juni", category: "Communicatie" },
-      { id: 4, text: "Reisinfo sturen naar deelnemers", status: "in progress", deadline: "5 juni", category: "Communicatie" },
+      { id: 3, text: "Programmaboekje naar drukker", status: "open", deadline: "5 juni", category: "Communicatie" },
+      { id: 4, text: "Reisinfo sturen naar deelnemers", status: "open", deadline: "5 juni", category: "Communicatie" },
       { id: 5, text: "Workshopmateriaal ophalen", status: "open", deadline: "11 juni", category: "Inhoud" },
       { id: 6, text: "Naam badges bestellen", status: "open", deadline: "8 juni", category: "Logistiek" },
       { id: 7, text: "Parkeerfaciliteiten regelen", status: "open", deadline: "10 juni", category: "Logistiek" },
     ],
-    budget: [
-      { category: "Locatiehuur", estimated: 4500, actual: 4500 },
-      { category: "Catering (lunch + borrel)", estimated: 3200, actual: 3050 },
-      { category: "AV & techniek", estimated: 1200, actual: 1400 },
-      { category: "Drukwerk", estimated: 350, actual: 0 },
-      { category: "Vervoer", estimated: 600, actual: 0 },
-      { category: "Overig", estimated: 500, actual: 120 },
+    budgetCategories: [
+      {
+        id: 1,
+        name: "Locatiehuur",
+        items: [{ id: 1, description: "Zaalkosten dagdeel", amountExclVat: 3719, vatRate: 21 }],
+      },
+      {
+        id: 2,
+        name: "Catering",
+        items: [
+          { id: 1, description: "Lunch buffet (34 pers)", amountExclVat: 1488, vatRate: 9 },
+          { id: 2, description: "Borrelsnacks & drankjes", amountExclVat: 1033, vatRate: 9 },
+        ],
+      },
+      {
+        id: 3,
+        name: "AV & techniek",
+        items: [{ id: 1, description: "Technicus + materiaal", amountExclVat: 1157, vatRate: 21 }],
+      },
+      {
+        id: 4,
+        name: "Drukwerk",
+        items: [{ id: 1, description: "Programmaboekjes", amountExclVat: 289, vatRate: 21 }],
+      },
+      {
+        id: 5,
+        name: "Overig",
+        items: [{ id: 1, description: "Naam badges & materiaal", amountExclVat: 99, vatRate: 21 }],
+      },
     ],
     timeline: [
-      { date: "1 apr", title: "Locatie geboekt", done: true },
-      { date: "15 apr", title: "Programma vastgesteld", done: true },
-      { date: "1 mei", title: "Uitnodigingen verstuurd", done: true },
-      { date: "15 mei", title: "Catering bevestigd", done: true },
-      { date: "5 jun", title: "Programmaboekje klaar", done: false, linkedTodoId: 3 },
-      { date: "5 jun", title: "Reisinfo verstuurd", done: false, linkedTodoId: 4 },
-      { date: "10 jun", title: "Alle logistiek geregeld", done: false },
-      { date: "12 jun", title: "Event", done: false },
-    ],
-    contacts: [
-      { name: "Marieke de Vries", role: "Contactpersoon venue", phone: "06-12345678", email: "marieke@scheepvaartmuseum.nl" },
-      { name: "Tom Bakker", role: "Cateraar", phone: "06-87654321", email: "tom@tastemakers.nl" },
-      { name: "Sandra Hoek", role: "AV-technicus", phone: "06-11223344" },
+      { id: 1, date: "1 apr", title: "Locatie geboekt", done: true, type: "user" },
+      { id: 2, date: "15 apr", title: "Programma vastgesteld", done: true, type: "user" },
+      { id: 3, date: "1 mei", title: "Uitnodigingen verstuurd", done: true, type: "user" },
+      { id: 4, date: "15 mei", title: "Catering bevestigd", done: true, type: "user" },
+      { id: 5, date: "5 jun", title: "Programmaboekje klaar", done: false, type: "user", linkedTodoId: 3 },
+      { id: 6, date: "5 jun", title: "Reisinfo verstuurd", done: false, type: "user", linkedTodoId: 4 },
+      { id: 7, date: "10 jun", title: "Alle logistiek geregeld", done: false, type: "user" },
+      { id: 8, date: "12 jun", title: "Event", done: false, type: "user" },
     ],
   },
   {
@@ -129,11 +101,18 @@ export const events: Event[] = [
     status: "in voorbereiding",
     type: "Netwerkevent",
     coverColor: "#6e9fc8",
-    concept: "Informele zomerborrel voor relaties en medewerkers uit de tech- en talentenbranche. Luchtige sfeer, rooftop met uitzicht, muziek op de achtergrond.",
-    audience: "120 professionals (mix klanten, partners en interne collega's)",
-    theme: "Zomer / open lucht / verbinding",
-    format: "Staande receptie, geen programma, DJ set, bites & drinks",
-    notes: "Regenplan nodig — tent of alternatieve locatie binnenshuis.",
+    totalBudget: 8600,
+    briefing: {
+      concept: "Informele zomerborrel voor relaties en medewerkers uit de tech- en talentenbranche. Luchtige sfeer, rooftop met uitzicht, muziek op de achtergrond.",
+      doelgroep: "120 professionals (mix klanten, partners en interne collega's)",
+      sfeerThema: "Zomer / open lucht / verbinding",
+      format: "Staande receptie, geen programma, DJ set, bites & drinks",
+      bijzonderheden: "Regenplan nodig — tent of alternatieve locatie binnenshuis.",
+      dresscode: "Casual zomer",
+      cateringWensen: "Bites in twee rondes, open bar met wijn/bier/frisdrank",
+      avTechniek: "DJ setup met eigen geluidsinstallatie",
+      vrijeNotities: "",
+    },
     program: [
       { time: "17:00", title: "Deuren open, welkomstdrankje" },
       { time: "17:30", title: "DJ start", notes: "Relaxed background set" },
@@ -143,30 +122,44 @@ export const events: Event[] = [
     ],
     todos: [
       { id: 1, text: "Regenplan bevestigen met venue", status: "open", deadline: "10 jun", category: "Locatie" },
-      { id: 2, text: "DJ contract tekenen", status: "in progress", deadline: "1 jun", category: "Entertainment" },
+      { id: 2, text: "DJ contract tekenen", status: "open", deadline: "1 jun", category: "Entertainment" },
       { id: 3, text: "Uitnodigingen sturen (2e ronde)", status: "open", deadline: "15 jun", category: "Communicatie" },
       { id: 4, text: "Barmedewerkers boeken", status: "open", deadline: "1 jun", category: "Catering" },
       { id: 5, text: "RSVP-deadline bewaken", status: "open", deadline: "20 jun", category: "Gasten" },
     ],
-    budget: [
-      { category: "Locatiehuur", estimated: 2800, actual: 2800 },
-      { category: "Catering & bar", estimated: 4200, actual: 0 },
-      { category: "DJ", estimated: 900, actual: 0 },
-      { category: "Decoratie", estimated: 400, actual: 0 },
-      { category: "Overig", estimated: 300, actual: 0 },
+    budgetCategories: [
+      {
+        id: 1,
+        name: "Locatiehuur",
+        items: [{ id: 1, description: "Rooftop dagdeel", amountExclVat: 2314, vatRate: 21 }],
+      },
+      {
+        id: 2,
+        name: "Catering & bar",
+        items: [
+          { id: 1, description: "Bites & hapjes (120 pers)", amountExclVat: 2202, vatRate: 9 },
+          { id: 2, description: "Drankenpakket", amountExclVat: 1651, vatRate: 9 },
+        ],
+      },
+      {
+        id: 3,
+        name: "DJ & entertainment",
+        items: [{ id: 1, description: "DJ set (4 uur)", amountExclVat: 744, vatRate: 21 }],
+      },
+      {
+        id: 4,
+        name: "Overig",
+        items: [{ id: 1, description: "Decoratie & styling", amountExclVat: 248, vatRate: 21 }],
+      },
     ],
     timeline: [
-      { date: "1 mei", title: "Locatie geboekt", done: true },
-      { date: "15 mei", title: "Uitnodigingen (1e ronde)", done: true },
-      { date: "1 jun", title: "DJ bevestigd", done: false, linkedTodoId: 2 },
-      { date: "15 jun", title: "2e ronde uitnodigingen", done: false, linkedTodoId: 3 },
-      { date: "20 jun", title: "RSVP-deadline", done: false },
-      { date: "25 jun", title: "Definitief gastenaantal door", done: false },
-      { date: "27 jun", title: "Event", done: false },
-    ],
-    contacts: [
-      { name: "Kevin Smit", role: "Venue manager NDSM", phone: "06-55667788", email: "kevin@ndsm.nl" },
-      { name: "DJ Arno", role: "DJ", phone: "06-99001122", email: "arno@soundworks.nl" },
+      { id: 1, date: "1 mei", title: "Locatie geboekt", done: true, type: "user" },
+      { id: 2, date: "15 mei", title: "Uitnodigingen (1e ronde)", done: true, type: "user" },
+      { id: 3, date: "1 jun", title: "DJ bevestigd", done: false, type: "user", linkedTodoId: 2 },
+      { id: 4, date: "15 jun", title: "2e ronde uitnodigingen", done: false, type: "user", linkedTodoId: 3 },
+      { id: 5, date: "20 jun", title: "RSVP-deadline", done: false, type: "user" },
+      { id: 6, date: "25 jun", title: "Definitief gastenaantal door", done: false, type: "user" },
+      { id: 7, date: "27 jun", title: "Event", done: false, type: "user" },
     ],
   },
   {
@@ -180,27 +173,45 @@ export const events: Event[] = [
     status: "concept",
     type: "Corporate Dinner",
     coverColor: "#a96ec8",
-    concept: "",
-    audience: "48 vaste klanten (A-relaties)",
-    theme: "Nog te bepalen",
-    format: "Zittend diner, meerdere gangen, korte toespraak directie",
-    notes: "",
+    totalBudget: 12800,
+    briefing: {
+      concept: "",
+      doelgroep: "48 vaste klanten (A-relaties)",
+      sfeerThema: "Nog te bepalen",
+      format: "Zittend diner, meerdere gangen, korte toespraak directie",
+      bijzonderheden: "",
+      dresscode: "",
+      cateringWensen: "",
+      avTechniek: "",
+      vrijeNotities: "",
+    },
     program: [],
     todos: [
       { id: 1, text: "Locaties vergelijken en keuze maken", status: "open", deadline: "1 jul", category: "Locatie" },
       { id: 2, text: "Concept en thema uitwerken", status: "open", deadline: "1 jul", category: "Inhoud" },
     ],
-    budget: [
-      { category: "Locatie & diner", estimated: 9600, actual: 0 },
-      { category: "Wijn & dranken", estimated: 2400, actual: 0 },
-      { category: "Decoratie", estimated: 800, actual: 0 },
+    budgetCategories: [
+      {
+        id: 1,
+        name: "Locatie & diner",
+        items: [{ id: 1, description: "Locatiehuur + menu per persoon", amountExclVat: 7934, vatRate: 9 }],
+      },
+      {
+        id: 2,
+        name: "Wijn & dranken",
+        items: [{ id: 1, description: "Wijnpakket + dranken", amountExclVat: 2202, vatRate: 9 }],
+      },
+      {
+        id: 3,
+        name: "Decoratie",
+        items: [{ id: 1, description: "Tafelschikking & bloemen", amountExclVat: 661, vatRate: 21 }],
+      },
     ],
     timeline: [
-      { date: "1 jul", title: "Locatie en concept vastgesteld", done: false },
-      { date: "1 aug", title: "Uitnodigingen verstuurd", done: false },
-      { date: "18 sep", title: "Event", done: false },
+      { id: 1, date: "1 jul", title: "Locatie en concept vastgesteld", done: false, type: "user" },
+      { id: 2, date: "1 aug", title: "Uitnodigingen verstuurd", done: false, type: "user" },
+      { id: 3, date: "18 sep", title: "Event", done: false, type: "user" },
     ],
-    contacts: [],
   },
   {
     id: 4,
@@ -213,11 +224,18 @@ export const events: Event[] = [
     status: "in voorbereiding",
     type: "Lancering",
     coverColor: "#c86e6e",
-    concept: "Grootschalige lancering van product Nova voor pers, partners en klanten. Hoog energieniveau, indrukwekkende presentatie, feestelijk slot.",
-    audience: "Pers (40), partners (100), klanten (140)",
-    theme: "Nova — nieuw tijdperk",
-    format: "Presentatie, demo-stands, netwerkreceptie",
-    notes: "",
+    totalBudget: 48900,
+    briefing: {
+      concept: "Grootschalige lancering van product Nova voor pers, partners en klanten. Hoog energieniveau, indrukwekkende presentatie, feestelijk slot.",
+      doelgroep: "Pers (40), partners (100), klanten (140)",
+      sfeerThema: "Nova — nieuw tijdperk",
+      format: "Presentatie, demo-stands, netwerkreceptie",
+      bijzonderheden: "",
+      dresscode: "Business",
+      cateringWensen: "Receptie canapés, open bar tijdens netwerk",
+      avTechniek: "LED wall, 5.1 surroundsound, 3 demo-stands met tablets",
+      vrijeNotities: "",
+    },
     program: [
       { time: "14:00", title: "Inloop & registratie" },
       { time: "15:00", title: "Plenaire presentatie (CEO + product team)" },
@@ -228,27 +246,47 @@ export const events: Event[] = [
     ],
     todos: [
       { id: 1, text: "Persuitnodigingen versturen", status: "open", deadline: "1 aug", category: "PR" },
-      { id: 2, text: "Presentatie CEO afstemmen", status: "in progress", deadline: "1 sep", category: "Inhoud" },
+      { id: 2, text: "Presentatie CEO afstemmen", status: "open", deadline: "1 sep", category: "Inhoud" },
       { id: 3, text: "Demo-stands ontwerpen", status: "open", deadline: "15 aug", category: "Productie" },
       { id: 4, text: "Catering offerte aanvragen", status: "open", deadline: "1 jul", category: "Catering" },
     ],
-    budget: [
-      { category: "Locatiehuur", estimated: 12000, actual: 12000 },
-      { category: "Productie & stands", estimated: 18000, actual: 0 },
-      { category: "Catering", estimated: 8400, actual: 0 },
-      { category: "AV & licht", estimated: 6500, actual: 0 },
-      { category: "PR & communicatie", estimated: 4000, actual: 0 },
+    budgetCategories: [
+      {
+        id: 1,
+        name: "Locatiehuur",
+        items: [{ id: 1, description: "Westergasfabriek dagdeel", amountExclVat: 9917, vatRate: 21 }],
+      },
+      {
+        id: 2,
+        name: "Productie & stands",
+        items: [
+          { id: 1, description: "Demo-stands (3 stuks)", amountExclVat: 8264, vatRate: 21 },
+          { id: 2, description: "Scenografie & decor", amountExclVat: 6612, vatRate: 21 },
+        ],
+      },
+      {
+        id: 3,
+        name: "Catering",
+        items: [{ id: 1, description: "Canapés + open bar (280 pers)", amountExclVat: 6936, vatRate: 9 }],
+      },
+      {
+        id: 4,
+        name: "AV & licht",
+        items: [{ id: 1, description: "LED wall, geluid, belichting", amountExclVat: 5372, vatRate: 21 }],
+      },
+      {
+        id: 5,
+        name: "PR & communicatie",
+        items: [{ id: 1, description: "Persberichten & uitnodigingen", amountExclVat: 3306, vatRate: 21 }],
+      },
     ],
     timeline: [
-      { date: "1 jun", title: "Locatie geboekt", done: true },
-      { date: "1 jul", title: "Catering offerte aangevraagd", done: false, linkedTodoId: 4 },
-      { date: "1 aug", title: "Persuitnodigingen verstuurd", done: false, linkedTodoId: 1 },
-      { date: "15 aug", title: "Demo-stands ontworpen", done: false, linkedTodoId: 3 },
-      { date: "1 sep", title: "Presentatie afgerond", done: false, linkedTodoId: 2 },
-      { date: "4 okt", title: "Event", done: false },
-    ],
-    contacts: [
-      { name: "Fleur Janssen", role: "Westergasfabriek", phone: "06-33445566", email: "fleur@westergasfabriek.nl" },
+      { id: 1, date: "1 jun", title: "Locatie geboekt", done: true, type: "user" },
+      { id: 2, date: "1 jul", title: "Catering offerte aangevraagd", done: false, type: "user", linkedTodoId: 4 },
+      { id: 3, date: "1 aug", title: "Persuitnodigingen verstuurd", done: false, type: "user", linkedTodoId: 1 },
+      { id: 4, date: "15 aug", title: "Demo-stands ontworpen", done: false, type: "user", linkedTodoId: 3 },
+      { id: 5, date: "1 sep", title: "Presentatie afgerond", done: false, type: "user", linkedTodoId: 2 },
+      { id: 6, date: "4 okt", title: "Event", done: false, type: "user" },
     ],
   },
   {
@@ -262,25 +300,43 @@ export const events: Event[] = [
     status: "concept",
     type: "Team Retreat",
     coverColor: "#6ec8b4",
-    concept: "",
-    audience: "22 teamleden",
-    theme: "Nog te bepalen",
-    format: "Dagprogramma met activiteiten en diner",
-    notes: "",
+    totalBudget: 5600,
+    briefing: {
+      concept: "",
+      doelgroep: "22 teamleden",
+      sfeerThema: "Nog te bepalen",
+      format: "Dagprogramma met activiteiten en diner",
+      bijzonderheden: "",
+      dresscode: "",
+      cateringWensen: "",
+      avTechniek: "",
+      vrijeNotities: "",
+    },
     program: [],
     todos: [
       { id: 1, text: "Datum en locatie intern bevestigen", status: "open", deadline: "1 sep", category: "Logistiek" },
     ],
-    budget: [
-      { category: "Locatie & accommodatie", estimated: 3300, actual: 0 },
-      { category: "Activiteiten", estimated: 1200, actual: 0 },
-      { category: "Catering", estimated: 1100, actual: 0 },
+    budgetCategories: [
+      {
+        id: 1,
+        name: "Locatie & accommodatie",
+        items: [{ id: 1, description: "Landgoed daggebruik", amountExclVat: 2727, vatRate: 21 }],
+      },
+      {
+        id: 2,
+        name: "Activiteiten",
+        items: [{ id: 1, description: "Teamactiviteiten", amountExclVat: 992, vatRate: 21 }],
+      },
+      {
+        id: 3,
+        name: "Catering",
+        items: [{ id: 1, description: "Lunch + diner (22 pers)", amountExclVat: 917, vatRate: 9 }],
+      },
     ],
     timeline: [
-      { date: "1 sep", title: "Locatie bevestigd", done: false },
-      { date: "5 dec", title: "Event", done: false },
+      { id: 1, date: "1 sep", title: "Locatie bevestigd", done: false, type: "user" },
+      { id: 2, date: "5 dec", title: "Event", done: false, type: "user" },
     ],
-    contacts: [],
   },
   {
     id: 6,
@@ -293,11 +349,18 @@ export const events: Event[] = [
     status: "afgerond",
     type: "Receptie",
     coverColor: "#8b8a7a",
-    concept: "Jaarlijkse nieuwjaarsreceptie voor relaties en medewerkers. Toespraak directie, buffet, netwerken.",
-    audience: "195 relaties en medewerkers",
-    theme: "Nieuw jaar, nieuwe kansen",
-    format: "Staande receptie, toespraak, buffet",
-    notes: "Goed verlopen. Catering was uitstekend. Parkeren was knelpunt — voor volgend jaar alternatief zoeken.",
+    totalBudget: 14000,
+    briefing: {
+      concept: "Jaarlijkse nieuwjaarsreceptie voor relaties en medewerkers. Toespraak directie, buffet, netwerken.",
+      doelgroep: "195 relaties en medewerkers",
+      sfeerThema: "Nieuw jaar, nieuwe kansen",
+      format: "Staande receptie, toespraak, buffet",
+      bijzonderheden: "Parkeren was knelpunt — voor volgend jaar alternatief zoeken.",
+      dresscode: "Smart casual",
+      cateringWensen: "Warm & koud buffet, wijn & bier, frisdrank",
+      avTechniek: "Microfoon voor toespraak, achtergrondmuziek",
+      vrijeNotities: "Goed verlopen. Catering was uitstekend.",
+    },
     program: [
       { time: "16:00", title: "Inloop" },
       { time: "16:30", title: "Toespraak directie" },
@@ -305,19 +368,32 @@ export const events: Event[] = [
       { time: "19:00", title: "Einde" },
     ],
     todos: [],
-    budget: [
-      { category: "Locatiehuur", estimated: 5000, actual: 4800 },
-      { category: "Catering", estimated: 7800, actual: 7950 },
-      { category: "AV", estimated: 800, actual: 750 },
-      { category: "Overig", estimated: 400, actual: 310 },
+    budgetCategories: [
+      {
+        id: 1,
+        name: "Locatiehuur",
+        items: [{ id: 1, description: "Stadsschouwburg zaal", amountExclVat: 3967, vatRate: 21 }],
+      },
+      {
+        id: 2,
+        name: "Catering",
+        items: [{ id: 1, description: "Buffet + dranken (195 pers)", amountExclVat: 6789, vatRate: 9 }],
+      },
+      {
+        id: 3,
+        name: "AV",
+        items: [{ id: 1, description: "Geluid & microfoon", amountExclVat: 620, vatRate: 21 }],
+      },
+      {
+        id: 4,
+        name: "Overig",
+        items: [{ id: 1, description: "Diversen", amountExclVat: 256, vatRate: 21 }],
+      },
     ],
     timeline: [
-      { date: "1 nov", title: "Locatie geboekt", done: true },
-      { date: "1 dec", title: "Uitnodigingen verstuurd", done: true },
-      { date: "10 jan", title: "Event", done: true },
-    ],
-    contacts: [
-      { name: "Bas Vermeer", role: "Stadsschouwburg", email: "bas@schouwburg.nl" },
+      { id: 1, date: "1 nov", title: "Locatie geboekt", done: true, type: "user" },
+      { id: 2, date: "1 dec", title: "Uitnodigingen verstuurd", done: true, type: "user" },
+      { id: 3, date: "10 jan", title: "Event", done: true, type: "user" },
     ],
   },
 ];
