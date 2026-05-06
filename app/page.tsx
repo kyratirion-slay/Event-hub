@@ -66,10 +66,9 @@ const fakeEvents: Event[] = [
 ];
 
 const stats = [
-  { label: "Actieve events",    value: "5",   sub: "1 bevestigd" },
-  { label: "Komende 30 dagen",  value: "2",   sub: "Zomerborrel & Offsite" },
-  { label: "Gasten totaal",     value: "699", sub: "Alle actieve events" },
-  { label: "Afgerond dit jaar", value: "1",   sub: "Nieuwjaarsreceptie" },
+  { label: "Actieve events",       value: "5",  sub: "1 bevestigd" },
+  { label: "Komende 30 dagen",     value: "2",  sub: "Zomerborrel & Offsite" },
+  { label: "Openstaande taken",    value: "12", sub: "Verspreid over 5 events" },
 ];
 
 export default function DashboardPage() {
@@ -122,7 +121,7 @@ export default function DashboardPage() {
         <div className="flex-1 overflow-y-auto px-8 py-7">
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-4 mb-8">
             {stats.map((stat) => (
               <div
                 key={stat.label}
