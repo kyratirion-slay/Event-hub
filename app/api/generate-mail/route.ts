@@ -30,13 +30,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
-  const { prompt, eventName, recipientName } = body;
+  const { prompt, eventName, recipientName, eventContext } = body as {
+    prompt: string; eventName?: string; recipientName?: string; eventContext?: string;
+  };
   if (!prompt?.trim()) {
     return NextResponse.json({ error: "Prompt is verplicht" }, { status: 400 });
   }
 
   const contextParts: string[] = [];
   if (eventName) contextParts.push(`Event: ${eventName}`);
+  if (eventContext) contextParts.push(eventContext);
   if (recipientName) contextParts.push(`Ontvanger: ${recipientName}`);
   const contextLine = contextParts.length ? `\n[Context: ${contextParts.join(" | ")}]\n` : "";
 

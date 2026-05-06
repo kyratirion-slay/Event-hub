@@ -3,14 +3,22 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { events as initialEvents } from "./mockData";
 import type {
-  Event, Todo, BudgetCategory, BudgetLineItem, EventBriefing, TimelineItem,
+  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status,
 } from "./types";
 
 interface StoreContextType {
   events: Event[];
+  // Event meta (header fields)
+  updateEventMeta(eventId: number, updates: Partial<Pick<Event, "name" | "date" | "startTime" | "endTime" | "location" | "guests" | "type" | "status">>): void;
+  // Program
+  addProgramItem(eventId: number): void;
+  updateProgramItem(eventId: number, index: number, updates: Partial<ProgramItem>): void;
+  deleteProgramItem(eventId: number, index: number): void;
+  reorderProgramItems(eventId: number, from: number, to: number): void;
   // Todos
   toggleTodo(eventId: number, todoId: number): void;
   addTodo(eventId: number, todo: Omit<Todo, "id">): void;
+  updateTodo(eventId: number, todoId: number, updates: Partial<Omit<Todo, "id">>): void;
   deleteTodo(eventId: number, todoId: number): void;
   // Briefing
   updateBriefingField(eventId: number, field: keyof EventBriefing, value: string): void;
@@ -25,6 +33,8 @@ interface StoreContextType {
   // Timeline
   toggleTimelineItem(eventId: number, itemId: number): void;
   addTimelineItem(eventId: number, item: Omit<TimelineItem, "id">): void;
+  updateTimelineItem(eventId: number, itemId: number, updates: Partial<Omit<TimelineItem, "id">>): void;
+  deleteTimelineItem(eventId: number, itemId: number): void;
   adoptSuggestion(eventId: number, suggestion: Omit<TimelineItem, "id" | "type">): void;
 }
 
@@ -52,10 +62,54 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       localStorage.setItem("eventhub-events", JSON.stringify(events));
-    } catch {
-      // ignore storage errors
-    }
+    } catch { /* ignore */ }
   }, [events]);
+
+  const updateEventMeta = useCallback((
+    eventId: number,
+    updates: Partial<Pick<Event, "name" | "date" | "startTime" | "endTime" | "location" | "guests" | "type" | "status">>
+  ) => {
+    setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, ...updates })));
+  }, []);
+
+  const addProgramItem = useCallback((eventId: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: [...e.program, { time: "", title: "", notes: "" }],
+      }))
+    );
+  }, []);
+
+  const updateProgramItem = useCallback((eventId: number, index: number, updates: Partial<ProgramItem>) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => {
+        const program = [...e.program];
+        program[index] = { ...program[index], ...updates };
+        return { ...e, program };
+      })
+    );
+  }, []);
+
+  const deleteProgramItem = useCallback((eventId: number, index: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: e.program.filter((_, i) => i !== index),
+      }))
+    );
+  }, []);
+
+  const reorderProgramItems = useCallback((eventId: number, from: number, to: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => {
+        const program = [...e.program];
+        const [moved] = program.splice(from, 1);
+        program.splice(to, 0, moved);
+        return { ...e, program };
+      })
+    );
+  }, []);
 
   const toggleTodo = useCallback((eventId: number, todoId: number) => {
     setEvents((prev) =>
@@ -73,6 +127,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateEvent(prev, eventId, (e) => ({
         ...e,
         todos: [...e.todos, { ...todo, id: nextId(e.todos) }],
+      }))
+    );
+  }, []);
+
+  const updateTodo = useCallback((eventId: number, todoId: number, updates: Partial<Omit<Todo, "id">>) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        todos: e.todos.map((t) => (t.id === todoId ? { ...t, ...updates } : t)),
       }))
     );
   }, []);
@@ -96,19 +159,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateTotalBudget = useCallback((eventId: number, totalBudget: number) => {
-    setEvents((prev) =>
-      updateEvent(prev, eventId, (e) => ({ ...e, totalBudget }))
-    );
+    setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, totalBudget })));
   }, []);
 
   const addBudgetCategory = useCallback((eventId: number, name: string) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
-        budgetCategories: [
-          ...e.budgetCategories,
-          { id: nextId(e.budgetCategories), name, items: [] },
-        ],
+        budgetCategories: [...e.budgetCategories, { id: nextId(e.budgetCategories), name, items: [] }],
       }))
     );
   }, []);
@@ -117,9 +175,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
-        budgetCategories: e.budgetCategories.map((c) =>
-          c.id === categoryId ? { ...c, name } : c
-        ),
+        budgetCategories: e.budgetCategories.map((c) => (c.id === categoryId ? { ...c, name } : c)),
       }))
     );
   }, []);
@@ -139,48 +195,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...e,
         budgetCategories: e.budgetCategories.map((c) =>
           c.id === categoryId
-            ? {
-                ...c,
-                items: [
-                  ...c.items,
-                  { id: nextId(c.items), description: "", amountExclVat: 0, vatRate: 21 },
-                ],
-              }
+            ? { ...c, items: [...c.items, { id: nextId(c.items), description: "", amountExclVat: 0, vatRate: 21 }] }
             : c
         ),
       }))
     );
   }, []);
 
-  const updateBudgetItem = useCallback(
-    (eventId: number, categoryId: number, itemId: number, updates: Partial<Omit<BudgetLineItem, "id">>) => {
-      setEvents((prev) =>
-        updateEvent(prev, eventId, (e) => ({
-          ...e,
-          budgetCategories: e.budgetCategories.map((c) =>
-            c.id === categoryId
-              ? {
-                  ...c,
-                  items: c.items.map((item) =>
-                    item.id === itemId ? { ...item, ...updates } : item
-                  ),
-                }
-              : c
-          ),
-        }))
-      );
-    },
-    []
-  );
+  const updateBudgetItem = useCallback((
+    eventId: number, categoryId: number, itemId: number,
+    updates: Partial<Omit<BudgetLineItem, "id">>
+  ) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        budgetCategories: e.budgetCategories.map((c) =>
+          c.id === categoryId
+            ? { ...c, items: c.items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)) }
+            : c
+        ),
+      }))
+    );
+  }, []);
 
   const deleteBudgetItem = useCallback((eventId: number, categoryId: number, itemId: number) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
         budgetCategories: e.budgetCategories.map((c) =>
-          c.id === categoryId
-            ? { ...c, items: c.items.filter((item) => item.id !== itemId) }
-            : c
+          c.id === categoryId ? { ...c, items: c.items.filter((item) => item.id !== itemId) } : c
         ),
       }))
     );
@@ -190,9 +233,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
-        timeline: e.timeline.map((t) =>
-          t.id === itemId ? { ...t, done: !t.done } : t
-        ),
+        timeline: e.timeline.map((t) => (t.id === itemId ? { ...t, done: !t.done } : t)),
       }))
     );
   }, []);
@@ -206,38 +247,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const updateTimelineItem = useCallback((eventId: number, itemId: number, updates: Partial<Omit<TimelineItem, "id">>) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        timeline: e.timeline.map((t) => (t.id === itemId ? { ...t, ...updates } : t)),
+      }))
+    );
+  }, []);
+
+  const deleteTimelineItem = useCallback((eventId: number, itemId: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        timeline: e.timeline.filter((t) => t.id !== itemId),
+      }))
+    );
+  }, []);
+
   const adoptSuggestion = useCallback((eventId: number, suggestion: Omit<TimelineItem, "id" | "type">) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
-        timeline: [
-          ...e.timeline,
-          { ...suggestion, id: nextId(e.timeline), type: "user" as const },
-        ],
+        timeline: [...e.timeline, { ...suggestion, id: nextId(e.timeline), type: "user" as const }],
       }))
     );
   }, []);
 
   return (
-    <StoreContext.Provider
-      value={{
-        events,
-        toggleTodo,
-        addTodo,
-        deleteTodo,
-        updateBriefingField,
-        updateTotalBudget,
-        addBudgetCategory,
-        renameBudgetCategory,
-        deleteBudgetCategory,
-        addBudgetItem,
-        updateBudgetItem,
-        deleteBudgetItem,
-        toggleTimelineItem,
-        addTimelineItem,
-        adoptSuggestion,
-      }}
-    >
+    <StoreContext.Provider value={{
+      events,
+      updateEventMeta,
+      addProgramItem, updateProgramItem, deleteProgramItem, reorderProgramItems,
+      toggleTodo, addTodo, updateTodo, deleteTodo,
+      updateBriefingField,
+      updateTotalBudget, addBudgetCategory, renameBudgetCategory, deleteBudgetCategory,
+      addBudgetItem, updateBudgetItem, deleteBudgetItem,
+      toggleTimelineItem, addTimelineItem, updateTimelineItem, deleteTimelineItem, adoptSuggestion,
+    }}>
       {children}
     </StoreContext.Provider>
   );
