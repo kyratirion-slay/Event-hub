@@ -1,17 +1,16 @@
 import Sidebar from "@/components/Sidebar";
 import EventCard, { type Event } from "@/components/EventCard";
-import { Plus, Search, Bell, Filter } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 
-const fakeEvents: Event[] = [
+const fakeEvents: Omit<Event, "index">[] = [
   {
     id: 1,
-    name: "Strategie Offsite — Q3 Leadership",
+    name: "Strategie Offsite Q3 Leadership",
     date: "12 juni 2025",
     location: "Het Scheepvaartmuseum, Amsterdam",
     guests: 34,
     status: "bevestigd",
     type: "Corporate Retreat",
-    coverColor: "#c8a96e",
   },
   {
     id: 2,
@@ -21,7 +20,6 @@ const fakeEvents: Event[] = [
     guests: 120,
     status: "in voorbereiding",
     type: "Netwerkevent",
-    coverColor: "#6e9fc8",
   },
   {
     id: 3,
@@ -31,27 +29,24 @@ const fakeEvents: Event[] = [
     guests: 48,
     status: "concept",
     type: "Corporate Dinner",
-    coverColor: "#a96ec8",
   },
   {
     id: 4,
-    name: "Productlancering 'Nova'",
+    name: "Productlancering Nova",
     date: "4 oktober 2025",
     location: "Westergasfabriek, Amsterdam",
     guests: 280,
     status: "in voorbereiding",
     type: "Lancering",
-    coverColor: "#c86e6e",
   },
   {
     id: 5,
-    name: "Team Retreat — Winter Edition",
+    name: "Team Retreat Winter Edition",
     date: "5 december 2025",
     location: "Landgoed De Witte Berken, Drenthe",
     guests: 22,
     status: "concept",
     type: "Team Retreat",
-    coverColor: "#6ec8b4",
   },
   {
     id: 6,
@@ -61,15 +56,14 @@ const fakeEvents: Event[] = [
     guests: 195,
     status: "afgerond",
     type: "Receptie",
-    coverColor: "#8b8a7a",
   },
 ];
 
 const stats = [
-  { label: "Actieve events", value: "5", sub: "1 bevestigd" },
-  { label: "Komende 30 dagen", value: "2", sub: "Zomerborrel & Offsite" },
-  { label: "Gasten totaal", value: "699", sub: "Alle actieve events" },
-  { label: "Afgerond dit jaar", value: "1", sub: "Nieuwjaarsreceptie" },
+  { num: "05", label: "Actieve\nEvents" },
+  { num: "02", label: "Komende\n30 Dagen" },
+  { num: "699", label: "Gasten\nTotaal" },
+  { num: "01", label: "Afgerond\nDit Jaar" },
 ];
 
 export default function DashboardPage() {
@@ -77,102 +71,141 @@ export default function DashboardPage() {
     <div className="flex h-full min-h-screen">
       <Sidebar />
 
-      {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "var(--background)" }}>
-        {/* Top bar */}
+
+        {/* Header */}
         <header
           className="flex items-center justify-between px-8 py-5 border-b"
           style={{ backgroundColor: "var(--card)", borderColor: "var(--border)" }}
         >
-          <div>
-            <h1 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>
+          <div className="flex items-end gap-4">
+            <h1
+              className="text-5xl leading-none"
+              style={{
+                fontFamily: "var(--font-barlow)",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "-0.02em",
+                color: "var(--foreground)",
+              }}
+            >
               Dashboard
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
-              Donderdag 1 mei 2025 — Welkom terug.
-            </p>
+            <span
+              className="text-sm mb-1"
+              style={{ color: "var(--muted)", fontFamily: "var(--font-inter)" }}
+            >
+              1 mei 2025
+            </span>
           </div>
+
           <div className="flex items-center gap-3">
             <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+              className="flex items-center gap-2 px-3 py-2 text-sm"
               style={{
-                backgroundColor: "var(--background)",
+                backgroundColor: "var(--beige-dark)",
                 border: "1px solid var(--border)",
                 color: "var(--muted)",
               }}
             >
-              <Search size={14} />
-              <span>Zoeken...</span>
+              <Search size={13} />
+              <span className="text-xs" style={{ fontFamily: "var(--font-barlow)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                Zoeken
+              </span>
             </div>
             <button
-              className="relative p-2 rounded-lg transition-colors"
-              style={{ backgroundColor: "var(--background)", border: "1px solid var(--border)" }}
+              className="flex items-center gap-2 px-4 py-2 text-xs uppercase tracking-widest font-bold transition-colors"
+              style={{
+                fontFamily: "var(--font-barlow)",
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                backgroundColor: "var(--red)",
+                color: "var(--beige)",
+              }}
             >
-              <Bell size={16} style={{ color: "var(--muted)" }} />
-              <span
-                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-                style={{ backgroundColor: "var(--accent)" }}
-              />
-            </button>
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ backgroundColor: "var(--foreground)", color: "var(--accent-light)" }}
-            >
-              <Plus size={14} />
-              Nieuw event
+              <Plus size={13} strokeWidth={2.5} />
+              Nieuw Event
             </button>
           </div>
         </header>
 
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto px-8 py-7">
-          {/* Stats row */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
-            {stats.map((stat) => (
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 border-b" style={{ borderColor: "var(--border)" }}>
+            {stats.map((s, i) => (
               <div
-                key={stat.label}
-                className="rounded-xl p-5"
-                style={{
-                  backgroundColor: "var(--card)",
-                  border: "1px solid var(--border)",
-                }}
+                key={s.label}
+                className="px-8 py-6 border-r"
+                style={{ borderColor: "var(--border)", borderRightColor: i === 3 ? "transparent" : "var(--border)" }}
               >
-                <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
-                  {stat.label}
+                <div
+                  className="text-6xl leading-none mb-2"
+                  style={{
+                    fontFamily: "var(--font-barlow)",
+                    fontWeight: 900,
+                    color: "var(--red)",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  {s.num}
                 </div>
-                <div className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
-                  {stat.value}
-                </div>
-                <div className="text-xs" style={{ color: "var(--muted)" }}>
-                  {stat.sub}
+                <div
+                  className="text-xs uppercase tracking-widest whitespace-pre-line"
+                  style={{
+                    fontFamily: "var(--font-barlow)",
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                    letterSpacing: "0.12em",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {s.label}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Events header */}
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              Alle events
-            </h2>
-            <button
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
-              style={{
-                border: "1px solid var(--border)",
-                color: "var(--muted)",
-                backgroundColor: "var(--card)",
-              }}
+          {/* Events section */}
+          <div className="px-8 py-6">
+            {/* Section header */}
+            <div
+              className="flex items-center justify-between mb-6 pb-4 border-b"
+              style={{ borderColor: "var(--border)" }}
             >
-              <Filter size={11} />
-              Filter
-            </button>
-          </div>
+              <h2
+                className="text-xs uppercase tracking-widest"
+                style={{
+                  fontFamily: "var(--font-barlow)",
+                  fontWeight: 800,
+                  letterSpacing: "0.16em",
+                  color: "var(--foreground)",
+                }}
+              >
+                Alle Events
+              </h2>
+              <button
+                className="flex items-center gap-1.5 text-xs uppercase tracking-widest px-3 py-1.5"
+                style={{
+                  fontFamily: "var(--font-barlow)",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  border: "1px solid var(--border)",
+                  color: "var(--muted)",
+                }}
+              >
+                <SlidersHorizontal size={11} />
+                Filter
+              </button>
+            </div>
 
-          {/* Event cards grid */}
-          <div className="grid grid-cols-3 gap-4">
-            {fakeEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
+            {/* Cards grid */}
+            <div className="grid grid-cols-3 gap-4">
+              {fakeEvents.map((event, i) => (
+                <EventCard key={event.id} event={{ ...event, index: i + 1 }} />
+              ))}
+            </div>
           </div>
         </div>
       </main>
