@@ -434,7 +434,7 @@ function SupplierForm({
             <div className="flex flex-wrap gap-1.5 mb-2">
               {availableSubcats.map(s => (
                 <button key={s} type="button" onClick={() => toggleSubcat(s)}
-                  className="text-xs px-2.5 py-1 rounded-full font-medium transition-colors"
+                  className="text-xs px-2.5 py-1 rounded-full font-medium transition-colors whitespace-nowrap"
                   style={subcats.includes(s)
                     ? { backgroundColor: catColor(category), color: "#fff", border: "1.5px solid transparent" }
                     : { border: "1.5px solid var(--border)", color: "var(--foreground)", backgroundColor: "var(--background)" }
@@ -631,7 +631,7 @@ function SupplierDetail({
         {supplier.subcategories.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {supplier.subcategories.map(s => (
-              <span key={s} className="text-xs px-2.5 py-1 rounded-full font-semibold"
+              <span key={s} className="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap"
                 style={{ backgroundColor: `${catColor(supplier.category)}1a`, color: catColor(supplier.category), border: `1px solid ${catColor(supplier.category)}30` }}>
                 {s}
               </span>
@@ -828,7 +828,7 @@ function SupplierCard({ supplier, allCats, onClick }: {
       {supplier.subcategories.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2.5">
           {supplier.subcategories.slice(0, 3).map(s => (
-            <span key={s} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+            <span key={s} className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
               style={{ backgroundColor: `${catColor(supplier.category)}1a`, color: catColor(supplier.category) }}>
               {s}
             </span>
@@ -876,7 +876,7 @@ function SprekerListRow({ supplier, onClick }: { supplier: Supplier; onClick(): 
       </div>
       <div className="flex items-center gap-1 flex-wrap shrink-0" style={{ width: "16rem" }}>
         {supplier.subcategories.slice(0, 2).map(s => (
-          <span key={s} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+          <span key={s} className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
             style={{ backgroundColor: `${catColor("sprekers")}18`, color: catColor("sprekers") }}>
             {s}
           </span>
@@ -1212,7 +1212,7 @@ export default function LeveranciersPage() {
                       </div>
                       <div className="flex gap-1 shrink-0" style={{ width: "12rem" }}>
                         {s.subcategories.slice(0, 2).map(sc => (
-                          <span key={sc} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          <span key={sc} className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
                             style={{ backgroundColor: `${catColor(s.category)}18`, color: catColor(s.category) }}>{sc}</span>
                         ))}
                       </div>

@@ -1,5 +1,5 @@
 export type {
-  Status, ProgramItem, Todo, BudgetLineItem, BudgetCategory,
+  Status, ProgramItem, ProgramDay, Todo, BudgetLineItem, BudgetCategory,
   TimelineItem, EventBriefing, Event, Supplier,
 } from "./types";
 
@@ -9,7 +9,7 @@ export const events: Event[] = [
   {
     id: 1,
     name: "North Sea Infrastructure",
-    date: "15 september 2025",
+    date: "15 september 2026",
     startTime: "15:00",
     endTime: "19:00",
     location: "Nader te bepalen",
@@ -46,7 +46,7 @@ export const events: Event[] = [
   {
     id: 2,
     name: "Zeilevent Vastgoed",
-    date: "17 september 2025",
+    date: "17 september 2026",
     startTime: "14:00",
     endTime: "19:00",
     location: "Jachthaven Enkhuizen, Enkhuizen",
@@ -83,7 +83,7 @@ export const events: Event[] = [
   {
     id: 3,
     name: "Vitaliteitsweek",
-    date: "21–25 september 2025",
+    date: "21 september 2026",
     startTime: "09:00",
     endTime: "17:00",
     location: "Kantoor",
@@ -121,7 +121,7 @@ export const events: Event[] = [
   {
     id: 4,
     name: "Alumni Borrel",
-    date: "22 oktober 2025",
+    date: "22 oktober 2026",
     startTime: "17:00",
     endTime: "21:00",
     location: "Kantoor",
@@ -158,7 +158,7 @@ export const events: Event[] = [
   {
     id: 5,
     name: "Infrastructure Event J/S",
-    date: "29 oktober 2025",
+    date: "29 oktober 2026",
     startTime: "13:00",
     endTime: "18:00",
     location: "Haarlemmermeerstation, Haarlem",
@@ -233,7 +233,7 @@ export const suppliers: Supplier[] = [
     lng: 5.2953,
     contact: { name: "Havenmeester", phone: "0228 313 353", email: "info@jachthaven-enkhuizen.nl" },
     priceIndication: "€500–€1.500 dagdeel",
-    notes: "Gebruikt voor Zeilevent Vastgoed 2025. Goede ervaring. Botenverhuur mogelijk via Enkhuizen Sailing.",
+    notes: "Gebruikt voor Zeilevent Vastgoed 2026. Goede ervaring. Botenverhuur mogelijk via Enkhuizen Sailing.",
   },
   {
     id: 4,

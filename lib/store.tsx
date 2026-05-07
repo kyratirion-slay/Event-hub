@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 // Bump this to force localStorage reset when data structure changes
-const STORAGE_VERSION = "4";
+const STORAGE_VERSION = "5";
 
 interface StoreContextType {
   events: Event[];

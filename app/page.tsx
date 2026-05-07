@@ -7,25 +7,42 @@ import EventCard from "@/components/EventCard";
 import { useStore } from "@/lib/store";
 import { Plus, Search, Bell, Filter, Circle, CheckCircle2, Trash2, CalendarClock } from "lucide-react";
 
+// ─── DATE HELPERS ─────────────────────────────────────────────────────────────
+
+const DUTCH_MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mrt: 2, apr: 3, mei: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, okt: 9, nov: 10, dec: 11,
+  januari: 0, februari: 1, maart: 2, april: 3, juni: 5,
+  juli: 6, augustus: 7, september: 8, oktober: 9, november: 10, december: 11,
+};
+
+function parseEventDate(dateStr: string): Date | null {
+  const parts = dateStr.trim().split(/\s+/);
+  let day = 0, month = -1, year = new Date().getFullYear();
+  for (const part of parts) {
+    const dayMatch = part.match(/^(\d+)/);
+    if (dayMatch) day = parseInt(dayMatch[1], 10);
+    const monthIdx = DUTCH_MONTHS[part.toLowerCase()];
+    if (monthIdx !== undefined) month = monthIdx;
+    if (/^\d{4}$/.test(part)) year = parseInt(part, 10);
+  }
+  if (day === 0 || month === -1) return null;
+  return new Date(year, month, day);
+}
+
 function parseDutchDeadline(deadline: string | undefined, eventDate: string): Date | null {
   if (!deadline) return null;
-  const months: Record<string, number> = {
-    jan: 0, feb: 1, mrt: 2, apr: 3, mei: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, okt: 9, nov: 10, dec: 11,
-    // also support full names as used in mockData
-    januari: 0, februari: 1, maart: 2, april: 3, juni: 5,
-    juli: 6, augustus: 7, september: 8, oktober: 9, november: 10, december: 11,
-  };
   const parts = deadline.trim().split(" ");
   if (parts.length < 2) return null;
   const day = parseInt(parts[0], 10);
-  const mon = months[parts[1].toLowerCase()];
+  const mon = DUTCH_MONTHS[parts[1].toLowerCase()];
   if (isNaN(day) || mon === undefined) return null;
-  // Infer year from event date
   const eventParts = eventDate.split(" ");
   const year = eventParts.length >= 3 ? parseInt(eventParts[2], 10) : new Date().getFullYear();
   return new Date(year, mon, day);
 }
+
+// ─── GLOBAL TODOS WIDGET ──────────────────────────────────────────────────────
 
 function GlobalTodosWidget() {
   const store = useStore();
@@ -39,7 +56,6 @@ function GlobalTodosWidget() {
   const nextWeek = new Date(today);
   nextWeek.setDate(today.getDate() + 7);
 
-  // Gather todos due within next 7 days from all active events
   const upcoming = store.events
     .filter((e) => e.status !== "afgerond")
     .flatMap((e) =>
@@ -57,7 +73,6 @@ function GlobalTodosWidget() {
       return da - db;
     });
 
-  // Also include todos with no deadline from all active events — just open ones
   const allOpen = store.events
     .filter((e) => e.status !== "afgerond")
     .flatMap((e) =>
@@ -77,11 +92,7 @@ function GlobalTodosWidget() {
       deadline: newDeadline.trim() || undefined,
       category: newCategory.trim() || "Algemeen",
     });
-    setNewText("");
-    setNewDeadline("");
-    setNewCategory("");
-    setTargetEventId("");
-    setAdding(false);
+    setNewText(""); setNewDeadline(""); setNewCategory(""); setTargetEventId(""); setAdding(false);
   }
 
   return (
@@ -194,6 +205,8 @@ function GlobalTodosWidget() {
   );
 }
 
+// ─── PAGE ─────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const store = useStore();
 
@@ -208,16 +221,31 @@ export default function DashboardPage() {
     coverColor: e.coverColor,
   }));
 
+  const today = new Date();
+  const in30 = new Date(today);
+  in30.setDate(today.getDate() + 30);
+
+  const komende30 = store.events.filter((e) => {
+    if (e.status === "afgerond") return false;
+    const d = parseEventDate(e.date);
+    return d !== null && d >= today && d <= in30;
+  });
+
   const openTodosTotal = store.events.reduce(
     (sum, e) => sum + e.todos.filter((t) => t.status !== "done").length,
     0
   );
   const activeCount = store.events.filter((e) => e.status !== "afgerond").length;
+  const bevestigdCount = store.events.filter((e) => e.status === "bevestigd").length;
+
+  const komende30Sub = komende30.length === 0
+    ? "Geen events de komende maand"
+    : komende30.map((e) => e.name).join(", ");
 
   const stats = [
-    { label: "Actieve events",    value: String(activeCount), sub: "1 bevestigd" },
-    { label: "Komende 30 dagen",  value: "2",                 sub: "Zomerborrel & Offsite" },
-    { label: "Openstaande taken", value: String(openTodosTotal), sub: "Verspreid over actieve events" },
+    { label: "Actieve events",    value: String(activeCount),       sub: bevestigdCount > 0 ? `${bevestigdCount} bevestigd` : "In voorbereiding" },
+    { label: "Komende 30 dagen",  value: String(komende30.length),  sub: komende30Sub },
+    { label: "Openstaande taken", value: String(openTodosTotal),    sub: "Verspreid over actieve events" },
   ];
 
   return (
@@ -275,7 +303,7 @@ export default function DashboardPage() {
               >
                 <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>{stat.label}</div>
                 <div className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>{stat.value}</div>
-                <div className="text-xs" style={{ color: "var(--muted)" }}>{stat.sub}</div>
+                <div className="text-xs truncate" style={{ color: "var(--muted)" }}>{stat.sub}</div>
               </div>
             ))}
           </div>
