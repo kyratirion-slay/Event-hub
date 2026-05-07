@@ -8,6 +8,9 @@ import type {
 
 interface StoreContextType {
   events: Event[];
+  // Event CRUD
+  addEvent(event: Omit<Event, "id">): void;
+  deleteEvent(eventId: number): void;
   // Event meta (header fields)
   updateEventMeta(eventId: number, updates: Partial<Pick<Event, "name" | "date" | "startTime" | "endTime" | "location" | "guests" | "type" | "status">>): void;
   // Program
@@ -30,6 +33,8 @@ interface StoreContextType {
   addBudgetItem(eventId: number, categoryId: number): void;
   updateBudgetItem(eventId: number, categoryId: number, itemId: number, updates: Partial<Omit<BudgetLineItem, "id">>): void;
   deleteBudgetItem(eventId: number, categoryId: number, itemId: number): void;
+  // Briefing order
+  updateBriefingOrder(eventId: number, order: Array<keyof EventBriefing>): void;
   // Note windows
   addNoteWindow(eventId: number, win: Omit<NoteWindow, "id">): void;
   updateNoteWindow(eventId: number, winId: number, updates: Partial<Omit<NoteWindow, "id">>): void;
@@ -68,6 +73,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("eventhub-events", JSON.stringify(events));
     } catch { /* ignore */ }
   }, [events]);
+
+  const addEvent = useCallback((event: Omit<Event, "id">) => {
+    setEvents((prev) => [...prev, { ...event, id: nextId(prev) }]);
+  }, []);
+
+  const deleteEvent = useCallback((eventId: number) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+  }, []);
 
   const updateEventMeta = useCallback((
     eventId: number,
@@ -151,6 +164,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         todos: e.todos.filter((t) => t.id !== todoId),
       }))
     );
+  }, []);
+
+  const updateBriefingOrder = useCallback((eventId: number, order: Array<keyof EventBriefing>) => {
+    setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, briefingFieldOrder: order })));
   }, []);
 
   const updateBriefingField = useCallback((eventId: number, field: keyof EventBriefing, value: string) => {
@@ -308,10 +325,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <StoreContext.Provider value={{
       events,
+      addEvent, deleteEvent,
       updateEventMeta,
       addProgramItem, updateProgramItem, deleteProgramItem, reorderProgramItems,
       toggleTodo, addTodo, updateTodo, deleteTodo,
-      updateBriefingField,
+      updateBriefingField, updateBriefingOrder,
       updateTotalBudget, addBudgetCategory, renameBudgetCategory, deleteBudgetCategory,
       addBudgetItem, updateBudgetItem, deleteBudgetItem,
       addNoteWindow, updateNoteWindow, deleteNoteWindow,

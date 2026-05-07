@@ -78,4 +78,5 @@ export interface Event {
   budgetCategories: BudgetCategory[];
   timeline: TimelineItem[];
   noteWindows?: NoteWindow[];
+  briefingFieldOrder?: Array<keyof EventBriefing>;
 }

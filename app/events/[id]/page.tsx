@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useStore } from "@/lib/store";
 import { generateSuggestions } from "@/lib/suggestions";
@@ -13,6 +14,7 @@ import {
   CheckCircle2, Circle, CheckCheck, AlertCircle,
   MapPin, Users, Clock, ChevronDown, ChevronUp,
   Sparkles, Pencil, Check, X, StickyNote,
+  Bold, Italic, Underline, List, ListOrdered,
 } from "lucide-react";
 
 // ─── INLINE EDIT ─────────────────────────────────────────────────────────
@@ -27,6 +29,7 @@ function InlineEdit({
   multiline = false,
   inputClass = "",
   rows = 2,
+  alwaysShowHint = false,
 }: {
   value: string;
   onSave(v: string): void;
@@ -37,6 +40,7 @@ function InlineEdit({
   multiline?: boolean;
   inputClass?: string;
   rows?: number;
+  alwaysShowHint?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -71,7 +75,7 @@ function InlineEdit({
       title="Klik om te bewerken"
     >
       {value || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>{placeholder}</span>}
-      <Pencil size={11} className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0" style={{ color: "var(--muted)" }} />
+      <Pencil size={11} className={`${alwaysShowHint ? "opacity-30" : "opacity-0 group-hover:opacity-40"} transition-opacity shrink-0`} style={{ color: "var(--muted)" }} />
     </span>
   );
 }
@@ -315,13 +319,14 @@ function TodoRow({
         )}
       </div>
 
-      {/* Category */}
+      {/* Category — always shows edit hint */}
       <InlineEdit
         value={todo.category}
         onSave={(v) => store.updateTodo(eventId, todo.id, { category: v })}
-        className="text-xs px-2 py-0.5 rounded shrink-0"
+        className="text-xs px-2 py-0.5 rounded shrink-0 !gap-1.5"
         style={{ backgroundColor: "var(--background)", color: "var(--muted)" }}
         inputClass="text-xs w-20"
+        alwaysShowHint
       />
 
       {/* Deadline */}
@@ -473,9 +478,12 @@ const BRIEFING_META: Record<keyof EventBriefing, { label: string; placeholder: s
 function UitwerkingTab({ eventId }: { eventId: number }) {
   const store = useStore();
   const event = store.events.find((e) => e.id === eventId)!;
-  const [order, setOrder] = useState<Array<keyof EventBriefing>>(DEFAULT_BRIEFING_ORDER);
+  const order = event.briefingFieldOrder ?? DEFAULT_BRIEFING_ORDER;
   const [dragKey, setDragKey] = useState<keyof EventBriefing | null>(null);
   const [dragOver, setDragOver] = useState<keyof EventBriefing | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const hiddenSections = DEFAULT_BRIEFING_ORDER.filter((k) => !order.includes(k));
 
   function handleDragStart(key: keyof EventBriefing) { setDragKey(key); }
   function handleDragOver(e: React.DragEvent, key: keyof EventBriefing) { e.preventDefault(); setDragOver(key); }
@@ -486,55 +494,103 @@ function UitwerkingTab({ eventId }: { eventId: number }) {
     const toIdx = newOrder.indexOf(key);
     newOrder.splice(fromIdx, 1);
     newOrder.splice(toIdx, 0, dragKey);
-    setOrder(newOrder);
+    store.updateBriefingOrder(eventId, newOrder);
     setDragKey(null);
     setDragOver(null);
   }
 
+  function deleteSection(key: keyof EventBriefing) {
+    store.updateBriefingOrder(eventId, order.filter((k) => k !== key));
+  }
+
+  function addSection(key: keyof EventBriefing) {
+    store.updateBriefingOrder(eventId, [...order, key]);
+    setShowAdd(false);
+  }
+
   return (
-    <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
-      {order.map((key) => {
-        const meta = BRIEFING_META[key];
-        return (
-          <div
-            key={key}
-            draggable
-            onDragStart={() => handleDragStart(key)}
-            onDragOver={(e) => handleDragOver(e, key)}
-            onDrop={() => handleDrop(key)}
-            onDragEnd={() => { setDragKey(null); setDragOver(null); }}
-            className="rounded-xl overflow-hidden transition-all"
-            style={{
-              gridColumn: meta.wide ? "1 / -1" : undefined,
-              border: dragOver === key && dragKey !== key ? "1.5px solid var(--accent)" : "1px solid var(--border)",
-              backgroundColor: "var(--card)",
-              opacity: dragKey === key ? 0.5 : 1,
-            }}
-          >
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {order.map((key) => {
+          const meta = BRIEFING_META[key];
+          return (
             <div
-              className="flex items-center gap-2 px-4 py-2.5 border-b cursor-grab"
-              style={{ borderColor: "var(--border)", backgroundColor: "var(--background)" }}
-            >
-              <GripVertical size={13} className="opacity-30" style={{ color: "var(--muted)" }} />
-              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-                {meta.label}
-              </span>
-            </div>
-            <textarea
-              rows={meta.rows}
-              value={event.briefing[key]}
-              onChange={(e) => store.updateBriefingField(eventId, key, e.target.value)}
-              placeholder={meta.placeholder}
-              className="w-full px-4 py-3 text-sm resize-none outline-none"
+              key={key}
+              draggable
+              onDragStart={() => handleDragStart(key)}
+              onDragOver={(e) => handleDragOver(e, key)}
+              onDrop={() => handleDrop(key)}
+              onDragEnd={() => { setDragKey(null); setDragOver(null); }}
+              className={`rounded-xl overflow-hidden transition-all group/section${meta.wide ? " sm:col-span-2" : ""}`}
               style={{
+                border: dragOver === key && dragKey !== key ? "1.5px solid var(--accent)" : "1px solid var(--border)",
                 backgroundColor: "var(--card)",
-                color: event.briefing[key] ? "var(--foreground)" : "var(--muted)",
-                lineHeight: 1.7,
+                opacity: dragKey === key ? 0.5 : 1,
               }}
-            />
-          </div>
-        );
-      })}
+            >
+              <div
+                className="flex items-center gap-2 px-4 py-2.5 border-b cursor-grab"
+                style={{ borderColor: "var(--border)", backgroundColor: "var(--background)" }}
+              >
+                <GripVertical size={13} className="opacity-30" style={{ color: "var(--muted)" }} />
+                <span className="flex-1 text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                  {meta.label}
+                </span>
+                <button
+                  onClick={() => deleteSection(key)}
+                  className="opacity-0 group-hover/section:opacity-40 hover:!opacity-100 transition-opacity"
+                  title="Sectie verwijderen"
+                >
+                  <X size={13} style={{ color: "var(--muted)" }} />
+                </button>
+              </div>
+              <textarea
+                rows={meta.rows}
+                value={event.briefing[key]}
+                onChange={(e) => store.updateBriefingField(eventId, key, e.target.value)}
+                placeholder={meta.placeholder}
+                className="w-full px-4 py-3 text-sm resize-none outline-none"
+                style={{
+                  backgroundColor: "var(--card)",
+                  color: event.briefing[key] ? "var(--foreground)" : "var(--muted)",
+                  lineHeight: 1.7,
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add section */}
+      {hiddenSections.length > 0 && (
+        <div className="mt-4 relative">
+          <button
+            onClick={() => setShowAdd((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+            style={{ border: "1px dashed var(--border)", color: "var(--muted)", backgroundColor: "var(--card)" }}
+          >
+            <Plus size={12} /> Sectie toevoegen
+          </button>
+          {showAdd && (
+            <div
+              className="absolute top-full left-0 mt-1 z-20 rounded-xl overflow-hidden py-1 min-w-[220px]"
+              style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+            >
+              {hiddenSections.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => addSection(key)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:opacity-80 transition-opacity text-left"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  <Plus size={12} style={{ color: "var(--accent)" }} />
+                  {BRIEFING_META[key].label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1034,13 +1090,32 @@ function FloatingNoteWindow({
 }) {
   const store = useStore();
   const divRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(win.title);
   const [showColors, setShowColors] = useState(false);
 
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.innerHTML = win.content || "";
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function execFormat(cmd: string) {
+    contentRef.current?.focus();
+    document.execCommand(cmd, false);
+  }
+
+  function handleContentInput() {
+    if (contentRef.current) {
+      store.updateNoteWindow(eventId, win.id, { content: contentRef.current.innerHTML });
+    }
+  }
+
   function startDrag(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
-    if (target.closest("button,textarea,input")) return;
+    if (target.closest("button,textarea,input,[contenteditable]")) return;
     e.preventDefault();
     onFocus();
     const startX = e.clientX;
@@ -1189,16 +1264,44 @@ function FloatingNoteWindow({
         </button>
       </div>
 
-      {/* Content */}
-      <textarea
-        value={win.content}
-        onChange={(e) => store.updateNoteWindow(eventId, win.id, { content: e.target.value })}
-        placeholder="Schrijf hier je notities..."
-        className="flex-1 resize-none outline-none px-4 py-3 text-sm"
+      {/* Formatting toolbar */}
+      <div
+        className="flex items-center gap-0.5 px-2 py-1 border-b flex-shrink-0"
+        style={{ borderColor: "rgba(0,0,0,0.07)", backgroundColor: "var(--background)" }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {[
+          { icon: <Bold size={11} />, cmd: "bold", title: "Vet" },
+          { icon: <Italic size={11} />, cmd: "italic", title: "Cursief" },
+          { icon: <Underline size={11} />, cmd: "underline", title: "Onderstrepen" },
+          { icon: <List size={11} />, cmd: "insertUnorderedList", title: "Opsomming" },
+          { icon: <ListOrdered size={11} />, cmd: "insertOrderedList", title: "Genummerd" },
+        ].map(({ icon, cmd, title }) => (
+          <button
+            key={cmd}
+            title={title}
+            onMouseDown={(e) => { e.preventDefault(); execFormat(cmd); }}
+            className="w-6 h-6 rounded flex items-center justify-center transition-colors hover:opacity-60"
+            style={{ color: "var(--muted)" }}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
+
+      {/* Content — contentEditable rich text */}
+      <div
+        ref={contentRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleContentInput}
+        onMouseDown={(e) => e.stopPropagation()}
+        data-placeholder="Schrijf hier je notities..."
+        className="flex-1 outline-none px-4 py-3 text-sm overflow-y-auto"
         style={{
-          backgroundColor: "var(--card)",
           color: "var(--foreground)",
           lineHeight: 1.75,
+          minHeight: 0,
         }}
       />
 
@@ -1315,13 +1418,21 @@ function NotitiesTab({ eventId }: { eventId: number }) {
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const store = useStore();
+  const router = useRouter();
   const event = store.events.find((e) => e.id === Number(id));
   if (!event) notFound();
 
   const [activeTab, setActiveTab] = useState<Tab>("Programma");
   const [editingStatus, setEditingStatus] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const st = statusConfig[event.status];
   const openTodos = event.todos.filter((t) => t.status !== "done");
+
+  function handleDeleteEvent() {
+    if (!event) return;
+    store.deleteEvent(event.id);
+    router.push("/events");
+  }
 
   // Full-width tabs (no summary sidebar)
   const fullWidthTabs: Tab[] = ["Uitwerking", "Budget", "Tijdlijn", "Notities"];
@@ -1369,36 +1480,65 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 />
               </div>
 
-              {/* Status badge — click to change */}
-              <div className="relative mt-1">
-                <button
-                  onClick={() => setEditingStatus((v) => !v)}
-                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: st.bg, color: st.text }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
-                  {st.label}
-                  <ChevronDown size={11} />
-                </button>
-                {editingStatus && (
-                  <div
-                    className="absolute right-0 top-full mt-1 z-20 rounded-xl overflow-hidden py-1 min-w-[180px]"
-                    style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+              {/* Status badge + delete */}
+              <div className="flex items-center gap-2 mt-1">
+                {/* Status badge — click to change */}
+                <div className="relative">
+                  <button
+                    onClick={() => setEditingStatus((v) => !v)}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
+                    style={{ backgroundColor: st.bg, color: st.text }}
                   >
-                    {STATUS_OPTIONS.map((s) => {
-                      const c = statusConfig[s];
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => { store.updateEventMeta(event.id, { status: s }); setEditingStatus(false); }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:opacity-80 transition-opacity text-left"
-                        >
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.dot }} />
-                          <span style={{ color: c.text }}>{c.label}</span>
-                        </button>
-                      );
-                    })}
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
+                    {st.label}
+                    <ChevronDown size={11} />
+                  </button>
+                  {editingStatus && (
+                    <div
+                      className="absolute right-0 top-full mt-1 z-20 rounded-xl overflow-hidden py-1 min-w-[180px]"
+                      style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+                    >
+                      {STATUS_OPTIONS.map((s) => {
+                        const c = statusConfig[s];
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => { store.updateEventMeta(event.id, { status: s }); setEditingStatus(false); }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:opacity-80 transition-opacity text-left"
+                          >
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.dot }} />
+                            <span style={{ color: c.text }}>{c.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Delete event */}
+                {confirmDelete ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ border: "1px solid #fca5a5", backgroundColor: "rgba(254,226,226,0.5)" }}>
+                    <span className="text-xs" style={{ color: "#7f1d1d" }}>Weet je het zeker?</span>
+                    <button
+                      onClick={handleDeleteEvent}
+                      className="text-xs font-medium px-2.5 py-1 rounded-lg"
+                      style={{ backgroundColor: "#dc2626", color: "#fff" }}
+                    >
+                      Ja, verwijder
+                    </button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-xs" style={{ color: "#7f1d1d" }}>
+                      Annuleer
+                    </button>
                   </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                    style={{ border: "1px solid var(--border)", color: "var(--muted)" }}
+                    title="Event verwijderen"
+                  >
+                    <Trash2 size={12} /> Verwijderen
+                  </button>
                 )}
               </div>
             </div>
