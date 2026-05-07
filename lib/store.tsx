@@ -1,17 +1,20 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { events as initialEvents } from "./mockData";
+import { events as initialEvents, suppliers as initialSuppliers, defaultEventLocatieSubcats } from "./mockData";
 import type {
-  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status, NoteWindow,
+  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status, NoteWindow, Supplier,
 } from "./types";
+
+// Bump this to force localStorage reset when data structure changes
+const STORAGE_VERSION = "3";
 
 interface StoreContextType {
   events: Event[];
   // Event CRUD
   addEvent(event: Omit<Event, "id">): void;
   deleteEvent(eventId: number): void;
-  // Event meta (header fields)
+  // Event meta
   updateEventMeta(eventId: number, updates: Partial<Pick<Event, "name" | "date" | "startTime" | "endTime" | "location" | "guests" | "type" | "status">>): void;
   // Program
   addProgramItem(eventId: number): void;
@@ -25,6 +28,7 @@ interface StoreContextType {
   deleteTodo(eventId: number, todoId: number): void;
   // Briefing
   updateBriefingField(eventId: number, field: keyof EventBriefing, value: string): void;
+  updateBriefingOrder(eventId: number, order: Array<keyof EventBriefing>): void;
   // Budget
   updateTotalBudget(eventId: number, totalBudget: number): void;
   addBudgetCategory(eventId: number, name: string): void;
@@ -33,8 +37,6 @@ interface StoreContextType {
   addBudgetItem(eventId: number, categoryId: number): void;
   updateBudgetItem(eventId: number, categoryId: number, itemId: number, updates: Partial<Omit<BudgetLineItem, "id">>): void;
   deleteBudgetItem(eventId: number, categoryId: number, itemId: number): void;
-  // Briefing order
-  updateBriefingOrder(eventId: number, order: Array<keyof EventBriefing>): void;
   // Note windows
   addNoteWindow(eventId: number, win: Omit<NoteWindow, "id">): void;
   updateNoteWindow(eventId: number, winId: number, updates: Partial<Omit<NoteWindow, "id">>): void;
@@ -45,6 +47,16 @@ interface StoreContextType {
   updateTimelineItem(eventId: number, itemId: number, updates: Partial<Omit<TimelineItem, "id">>): void;
   deleteTimelineItem(eventId: number, itemId: number): void;
   adoptSuggestion(eventId: number, suggestion: Omit<TimelineItem, "id" | "type">): void;
+  // Suppliers
+  suppliers: Supplier[];
+  addSupplier(supplier: Omit<Supplier, "id">): void;
+  updateSupplier(supplierId: number, updates: Partial<Omit<Supplier, "id">>): void;
+  deleteSupplier(supplierId: number): void;
+  // Supplier categories
+  eventLocatieSubcats: string[];
+  addEventLocatieSubcat(name: string): void;
+  customSupplierCats: string[];
+  addCustomSupplierCat(name: string): void;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -57,10 +69,22 @@ function updateEvent(events: Event[], eventId: number, updater: (e: Event) => Ev
   return events.map((e) => (e.id === eventId ? updater(e) : e));
 }
 
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<Event[]>(() => {
     if (typeof window === "undefined") return initialEvents;
     try {
+      const version = localStorage.getItem("eventhub-version");
+      if (version !== STORAGE_VERSION) return initialEvents;
       const stored = localStorage.getItem("eventhub-events");
       return stored ? JSON.parse(stored) : initialEvents;
     } catch {
@@ -68,11 +92,43 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    if (typeof window === "undefined") return initialSuppliers;
+    try {
+      const version = localStorage.getItem("eventhub-version");
+      if (version !== STORAGE_VERSION) return initialSuppliers;
+      return loadFromStorage("eventhub-suppliers", initialSuppliers);
+    } catch {
+      return initialSuppliers;
+    }
+  });
+
+  const [eventLocatieSubcats, setEventLocatieSubcats] = useState<string[]>(() => {
+    if (typeof window === "undefined") return defaultEventLocatieSubcats;
+    try {
+      const version = localStorage.getItem("eventhub-version");
+      if (version !== STORAGE_VERSION) return defaultEventLocatieSubcats;
+      return loadFromStorage("eventhub-event-subcats", defaultEventLocatieSubcats);
+    } catch {
+      return defaultEventLocatieSubcats;
+    }
+  });
+
+  const [customSupplierCats, setCustomSupplierCats] = useState<string[]>(() =>
+    loadFromStorage("eventhub-custom-cats", [])
+  );
+
   useEffect(() => {
     try {
+      localStorage.setItem("eventhub-version", STORAGE_VERSION);
       localStorage.setItem("eventhub-events", JSON.stringify(events));
+      localStorage.setItem("eventhub-suppliers", JSON.stringify(suppliers));
+      localStorage.setItem("eventhub-event-subcats", JSON.stringify(eventLocatieSubcats));
+      localStorage.setItem("eventhub-custom-cats", JSON.stringify(customSupplierCats));
     } catch { /* ignore */ }
-  }, [events]);
+  }, [events, suppliers, eventLocatieSubcats, customSupplierCats]);
+
+  // ─── Event CRUD ────────────────────────────────────────────────────────
 
   const addEvent = useCallback((event: Omit<Event, "id">) => {
     setEvents((prev) => [...prev, { ...event, id: nextId(prev) }]);
@@ -88,6 +144,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, ...updates })));
   }, []);
+
+  // ─── Program ───────────────────────────────────────────────────────────
 
   const addProgramItem = useCallback((eventId: number) => {
     setEvents((prev) =>
@@ -128,6 +186,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  // ─── Todos ─────────────────────────────────────────────────────────────
+
   const toggleTodo = useCallback((eventId: number, todoId: number) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
@@ -166,9 +226,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const updateBriefingOrder = useCallback((eventId: number, order: Array<keyof EventBriefing>) => {
-    setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, briefingFieldOrder: order })));
-  }, []);
+  // ─── Briefing ──────────────────────────────────────────────────────────
 
   const updateBriefingField = useCallback((eventId: number, field: keyof EventBriefing, value: string) => {
     setEvents((prev) =>
@@ -178,6 +236,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }))
     );
   }, []);
+
+  const updateBriefingOrder = useCallback((eventId: number, order: Array<keyof EventBriefing>) => {
+    setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, briefingFieldOrder: order })));
+  }, []);
+
+  // ─── Budget ────────────────────────────────────────────────────────────
 
   const updateTotalBudget = useCallback((eventId: number, totalBudget: number) => {
     setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, totalBudget })));
@@ -250,6 +314,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  // ─── Note windows ──────────────────────────────────────────────────────
+
   const addNoteWindow = useCallback((eventId: number, win: Omit<NoteWindow, "id">) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => {
@@ -276,6 +342,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }))
     );
   }, []);
+
+  // ─── Timeline ──────────────────────────────────────────────────────────
 
   const toggleTimelineItem = useCallback((eventId: number, itemId: number) => {
     setEvents((prev) =>
@@ -322,11 +390,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  // ─── Suppliers ─────────────────────────────────────────────────────────
+
+  const addSupplier = useCallback((supplier: Omit<Supplier, "id">) => {
+    setSuppliers((prev) => [...prev, { ...supplier, id: nextId(prev) }]);
+  }, []);
+
+  const updateSupplier = useCallback((supplierId: number, updates: Partial<Omit<Supplier, "id">>) => {
+    setSuppliers((prev) =>
+      prev.map((s) => (s.id === supplierId ? { ...s, ...updates } : s))
+    );
+  }, []);
+
+  const deleteSupplier = useCallback((supplierId: number) => {
+    setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
+  }, []);
+
+  const addEventLocatieSubcat = useCallback((name: string) => {
+    setEventLocatieSubcats((prev) => prev.includes(name) ? prev : [...prev, name]);
+  }, []);
+
+  const addCustomSupplierCat = useCallback((name: string) => {
+    setCustomSupplierCats((prev) => prev.includes(name) ? prev : [...prev, name]);
+  }, []);
+
   return (
     <StoreContext.Provider value={{
       events,
-      addEvent, deleteEvent,
-      updateEventMeta,
+      addEvent, deleteEvent, updateEventMeta,
       addProgramItem, updateProgramItem, deleteProgramItem, reorderProgramItems,
       toggleTodo, addTodo, updateTodo, deleteTodo,
       updateBriefingField, updateBriefingOrder,
@@ -334,6 +425,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       addBudgetItem, updateBudgetItem, deleteBudgetItem,
       addNoteWindow, updateNoteWindow, deleteNoteWindow,
       toggleTimelineItem, addTimelineItem, updateTimelineItem, deleteTimelineItem, adoptSuggestion,
+      suppliers, addSupplier, updateSupplier, deleteSupplier,
+      eventLocatieSubcats, addEventLocatieSubcat,
+      customSupplierCats, addCustomSupplierCat,
     }}>
       {children}
     </StoreContext.Provider>

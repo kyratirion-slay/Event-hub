@@ -80,3 +80,25 @@ export interface Event {
   noteWindows?: NoteWindow[];
   briefingFieldOrder?: Array<keyof EventBriefing>;
 }
+
+// ─── Leveranciers ──────────────────────────────────────────────────────────
+
+export interface SupplierContact {
+  name: string;
+  phone: string;
+  email: string;
+}
+
+export interface Supplier {
+  id: number;
+  name: string;
+  category: string; // "event-locaties" | "catering" | "sprekers" | "overig" | custom
+  subcategories: string[];
+  address: string;
+  city: string;
+  lat?: number;
+  lng?: number;
+  contact: SupplierContact;
+  priceIndication: string;
+  notes: string;
+}

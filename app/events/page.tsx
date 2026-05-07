@@ -341,15 +341,17 @@ function EventCard({ event }: { event: Event }) {
           <div className="font-semibold truncate" style={{ color: "var(--foreground)" }}>{event.name}</div>
         </div>
 
-        {/* Meta — fixed-width columns */}
-        <div className="hidden md:flex items-center gap-0 text-sm" style={{ color: "var(--muted)" }}>
-          <span className="flex items-center gap-1.5 w-44 shrink-0">
-            <Calendar size={12} className="shrink-0" />{event.date}
+        {/* Meta — fixed-width columns, all start at same x-position */}
+        <div className="hidden md:flex items-center text-sm shrink-0" style={{ color: "var(--muted)" }}>
+          <span className="flex items-center gap-1.5 shrink-0" style={{ width: "11rem" }}>
+            <Calendar size={12} className="shrink-0" />
+            <span className="truncate">{event.date}</span>
           </span>
-          <span className="flex items-center gap-1.5 w-36 shrink-0">
-            <MapPin size={12} className="shrink-0" />{event.location.split(",")[0] || "—"}
+          <span className="flex items-center gap-1.5 shrink-0" style={{ width: "9rem" }}>
+            <MapPin size={12} className="shrink-0" />
+            <span className="truncate">{event.location.split(",")[0] || "—"}</span>
           </span>
-          <span className="flex items-center gap-1.5 w-20 shrink-0">
+          <span className="flex items-center gap-1.5 shrink-0" style={{ width: "5rem" }}>
             <Users size={12} className="shrink-0" />{event.guests}
           </span>
         </div>
