@@ -6,6 +6,12 @@ export interface ProgramItem {
   notes?: string;
 }
 
+export interface ProgramDay {
+  id: number;
+  label: string;
+  items: ProgramItem[];
+}
+
 export interface Todo {
   id: number;
   text: string;
@@ -73,7 +79,7 @@ export interface Event {
   coverColor: string;
   totalBudget: number;
   briefing: EventBriefing;
-  program: ProgramItem[];
+  program: ProgramDay[];
   todos: Todo[];
   budgetCategories: BudgetCategory[];
   timeline: TimelineItem[];
@@ -101,7 +107,6 @@ export interface Supplier {
   contact: SupplierContact;
   priceIndication: string;
   notes: string;
-  // Extra filter fields (relevant for all, especially sprekers)
   typeEvent?: string;
   taal?: string;
   dagdeelVoorkeur?: string;

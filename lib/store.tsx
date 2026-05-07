@@ -3,11 +3,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { events as initialEvents, suppliers as initialSuppliers, defaultEventLocatieSubcats, defaultSprekerSubcats } from "./mockData";
 import type {
-  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status, NoteWindow, Supplier,
+  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, ProgramDay, Status, NoteWindow, Supplier,
 } from "./types";
 
 // Bump this to force localStorage reset when data structure changes
-const STORAGE_VERSION = "3";
+const STORAGE_VERSION = "4";
 
 interface StoreContextType {
   events: Event[];
@@ -16,11 +16,15 @@ interface StoreContextType {
   deleteEvent(eventId: number): void;
   // Event meta
   updateEventMeta(eventId: number, updates: Partial<Pick<Event, "name" | "date" | "startTime" | "endTime" | "location" | "guests" | "type" | "status">>): void;
-  // Program
-  addProgramItem(eventId: number): void;
-  updateProgramItem(eventId: number, index: number, updates: Partial<ProgramItem>): void;
-  deleteProgramItem(eventId: number, index: number): void;
-  reorderProgramItems(eventId: number, from: number, to: number): void;
+  // Program days
+  addProgramDay(eventId: number, label: string): void;
+  removeProgramDay(eventId: number, dayId: number): void;
+  renameProgramDay(eventId: number, dayId: number, label: string): void;
+  // Program items (now scoped to a day)
+  addProgramItem(eventId: number, dayId: number): void;
+  updateProgramItem(eventId: number, dayId: number, index: number, updates: Partial<ProgramItem>): void;
+  deleteProgramItem(eventId: number, dayId: number, index: number): void;
+  reorderProgramItems(eventId: number, dayId: number, from: number, to: number): void;
   // Todos
   toggleTodo(eventId: number, todoId: number): void;
   addTodo(eventId: number, todo: Omit<Todo, "id">): void;
@@ -152,44 +156,87 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, ...updates })));
   }, []);
 
-  // ─── Program ───────────────────────────────────────────────────────────
+  // ─── Program days ──────────────────────────────────────────────────────
 
-  const addProgramItem = useCallback((eventId: number) => {
+  const addProgramDay = useCallback((eventId: number, label: string) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
-        program: [...e.program, { time: "", title: "", notes: "" }],
+        program: [...e.program, { id: nextId(e.program), label, items: [] }],
       }))
     );
   }, []);
 
-  const updateProgramItem = useCallback((eventId: number, index: number, updates: Partial<ProgramItem>) => {
-    setEvents((prev) =>
-      updateEvent(prev, eventId, (e) => {
-        const program = [...e.program];
-        program[index] = { ...program[index], ...updates };
-        return { ...e, program };
-      })
-    );
-  }, []);
-
-  const deleteProgramItem = useCallback((eventId: number, index: number) => {
+  const removeProgramDay = useCallback((eventId: number, dayId: number) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
         ...e,
-        program: e.program.filter((_, i) => i !== index),
+        program: e.program.filter((d) => d.id !== dayId),
       }))
     );
   }, []);
 
-  const reorderProgramItems = useCallback((eventId: number, from: number, to: number) => {
+  const renameProgramDay = useCallback((eventId: number, dayId: number, label: string) => {
     setEvents((prev) =>
-      updateEvent(prev, eventId, (e) => {
-        const program = [...e.program];
-        const [moved] = program.splice(from, 1);
-        program.splice(to, 0, moved);
-        return { ...e, program };
-      })
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: e.program.map((d) => (d.id === dayId ? { ...d, label } : d)),
+      }))
+    );
+  }, []);
+
+  // ─── Program items ─────────────────────────────────────────────────────
+
+  const addProgramItem = useCallback((eventId: number, dayId: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: e.program.map((d) =>
+          d.id === dayId
+            ? { ...d, items: [...d.items, { time: "", title: "", notes: "" }] }
+            : d
+        ),
+      }))
+    );
+  }, []);
+
+  const updateProgramItem = useCallback((eventId: number, dayId: number, index: number, updates: Partial<ProgramItem>) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: e.program.map((d) => {
+          if (d.id !== dayId) return d;
+          const items = [...d.items];
+          items[index] = { ...items[index], ...updates };
+          return { ...d, items };
+        }),
+      }))
+    );
+  }, []);
+
+  const deleteProgramItem = useCallback((eventId: number, dayId: number, index: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: e.program.map((d) =>
+          d.id === dayId ? { ...d, items: d.items.filter((_, i) => i !== index) } : d
+        ),
+      }))
+    );
+  }, []);
+
+  const reorderProgramItems = useCallback((eventId: number, dayId: number, from: number, to: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        program: e.program.map((d) => {
+          if (d.id !== dayId) return d;
+          const items = [...d.items];
+          const [moved] = items.splice(from, 1);
+          items.splice(to, 0, moved);
+          return { ...d, items };
+        }),
+      }))
     );
   }, []);
 
@@ -429,6 +476,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <StoreContext.Provider value={{
       events,
       addEvent, deleteEvent, updateEventMeta,
+      addProgramDay, removeProgramDay, renameProgramDay,
       addProgramItem, updateProgramItem, deleteProgramItem, reorderProgramItems,
       toggleTodo, addTodo, updateTodo, deleteTodo,
       updateBriefingField, updateBriefingOrder,

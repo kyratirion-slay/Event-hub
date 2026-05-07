@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useStore } from "@/lib/store";
 import { generateSuggestions } from "@/lib/suggestions";
-import type { EventBriefing, TimelineItem, NoteWindow } from "@/lib/types";
+import type { EventBriefing, TimelineItem, NoteWindow, ProgramDay } from "@/lib/types";
 import {
   ArrowLeft, ChevronRight, Plus, Trash2, GripVertical,
   CheckCircle2, Circle, CheckCheck, AlertCircle,
@@ -148,116 +148,195 @@ function formatEuro(n: number) {
 
 // ─── PROGRAMMA TAB ────────────────────────────────────────────────────────
 
-function ProgrammaTab({ eventId }: { eventId: number }) {
+function ProgramDayColumn({ eventId, day }: { eventId: number; day: ProgramDay }) {
   const store = useStore();
-  const event = store.events.find((e) => e.id === eventId)!;
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState(day.label);
 
-  function handleDragStart(i: number) { setDragIndex(i); }
-  function handleDragOver(e: React.DragEvent, i: number) { e.preventDefault(); setDragOver(i); }
-  function handleDrop(i: number) {
-    if (dragIndex !== null && dragIndex !== i) store.reorderProgramItems(eventId, dragIndex, i);
-    setDragIndex(null);
-    setDragOver(null);
+  function saveLabel() {
+    if (labelDraft.trim()) store.renameProgramDay(eventId, day.id, labelDraft.trim());
+    setEditingLabel(false);
   }
-  function handleDragEnd() { setDragIndex(null); setDragOver(null); }
 
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-          Programma op de dag
-        </h2>
-        <button
-          onClick={() => store.addProgramItem(eventId)}
-          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-          style={{ backgroundColor: "var(--foreground)", color: "var(--accent-light)" }}
-        >
-          <Plus size={12} /> Regel toevoegen
-        </button>
+    <div
+      className="shrink-0 flex flex-col rounded-2xl overflow-hidden"
+      style={{ width: 300, border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
+    >
+      {/* Day header */}
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: "var(--border)", backgroundColor: "var(--background)" }}
+      >
+        <div className="flex-1 min-w-0">
+          {editingLabel ? (
+            <input
+              autoFocus
+              value={labelDraft}
+              onChange={(e) => setLabelDraft(e.target.value)}
+              onBlur={saveLabel}
+              onKeyDown={(e) => { if (e.key === "Enter") saveLabel(); if (e.key === "Escape") setEditingLabel(false); }}
+              className="text-sm font-semibold bg-transparent outline-none w-full"
+              style={{ borderBottom: "1.5px solid var(--accent)", color: "var(--foreground)" }}
+            />
+          ) : (
+            <button
+              onClick={() => { setLabelDraft(day.label); setEditingLabel(true); }}
+              className="text-sm font-semibold text-left hover:opacity-70 transition-opacity flex items-center gap-1.5 group"
+              style={{ color: "var(--foreground)" }}
+            >
+              {day.label}
+              <Pencil size={10} className="opacity-0 group-hover:opacity-40 transition-opacity" style={{ color: "var(--muted)" }} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => store.addProgramItem(eventId, day.id)}
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors"
+            style={{ backgroundColor: "var(--foreground)", color: "var(--accent-light)" }}
+          >
+            <Plus size={10} /> Regel
+          </button>
+          <button
+            onClick={() => store.removeProgramDay(eventId, day.id)}
+            className="opacity-30 hover:opacity-80 transition-opacity"
+            title="Dag verwijderen"
+          >
+            <Trash2 size={12} style={{ color: "var(--muted)" }} />
+          </button>
+        </div>
       </div>
 
-      {event.program.length === 0 ? (
-        <button
-          onClick={() => store.addProgramItem(eventId)}
-          className="w-full py-10 rounded-xl border-2 border-dashed text-sm transition-colors hover:opacity-80"
-          style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-        >
-          + Voeg eerste programmaregel toe
-        </button>
-      ) : (
-        <div className="relative">
-          <div className="absolute left-[4.5rem] top-0 bottom-0 w-px" style={{ backgroundColor: "var(--border)" }} />
-          <div className="space-y-0">
-            {event.program.map((item, i) => (
+      {/* Items */}
+      <div className="flex-1 overflow-y-auto">
+        {day.items.length === 0 ? (
+          <button
+            onClick={() => store.addProgramItem(eventId, day.id)}
+            className="w-full py-8 text-xs transition-colors hover:opacity-70"
+            style={{ color: "var(--muted)" }}
+          >
+            + Regel toevoegen
+          </button>
+        ) : (
+          <div className="relative px-1 py-2">
+            <div className="absolute left-[3.75rem] top-0 bottom-0 w-px" style={{ backgroundColor: "var(--border)" }} />
+            {day.items.map((item, i) => (
               <div
                 key={i}
                 draggable
-                onDragStart={() => handleDragStart(i)}
-                onDragOver={(e) => handleDragOver(e, i)}
-                onDrop={() => handleDrop(i)}
-                onDragEnd={handleDragEnd}
-                className="flex gap-3 items-start py-3 relative group transition-colors"
+                onDragStart={() => setDragIndex(i)}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
+                onDrop={() => {
+                  if (dragIndex !== null && dragIndex !== i) store.reorderProgramItems(eventId, day.id, dragIndex, i);
+                  setDragIndex(null); setDragOver(null);
+                }}
+                onDragEnd={() => { setDragIndex(null); setDragOver(null); }}
+                className="flex gap-2 items-start py-2.5 relative group"
                 style={{
                   opacity: dragIndex === i ? 0.4 : 1,
                   backgroundColor: dragOver === i && dragIndex !== i ? "rgba(232,111,163,0.05)" : "transparent",
+                  borderRadius: 8,
                 }}
               >
-                {/* Drag handle */}
-                <div className="w-5 shrink-0 flex justify-center pt-1 opacity-0 group-hover:opacity-40 cursor-grab transition-opacity">
-                  <GripVertical size={14} style={{ color: "var(--muted)" }} />
+                <div className="w-4 shrink-0 flex justify-center pt-1 opacity-0 group-hover:opacity-30 cursor-grab transition-opacity">
+                  <GripVertical size={12} style={{ color: "var(--muted)" }} />
                 </div>
-
-                {/* Time */}
-                <div className="w-12 shrink-0">
+                <div className="w-10 shrink-0">
                   <InlineEdit
                     value={item.time}
-                    onSave={(v) => store.updateProgramItem(eventId, i, { time: v })}
+                    onSave={(v) => store.updateProgramItem(eventId, day.id, i, { time: v })}
                     placeholder="--:--"
-                    className="text-sm font-semibold"
+                    className="text-xs font-bold"
                     style={{ color: "var(--accent)" }}
-                    inputClass="text-sm font-semibold"
+                    inputClass="text-xs font-bold"
                   />
                 </div>
-
-                {/* Dot */}
-                <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 z-10" style={{ backgroundColor: "var(--accent)", outline: "3px solid var(--background)" }} />
-
-                {/* Title + notes */}
+                <div className="w-2 h-2 rounded-full shrink-0 mt-1 z-10" style={{ backgroundColor: "var(--accent)", outline: "3px solid var(--card)" }} />
                 <div className="flex-1 min-w-0">
                   <InlineEdit
                     value={item.title}
-                    onSave={(v) => store.updateProgramItem(eventId, i, { title: v })}
+                    onSave={(v) => store.updateProgramItem(eventId, day.id, i, { title: v })}
                     placeholder="Omschrijving..."
-                    className="font-medium text-sm"
+                    className="text-sm font-medium"
                     style={{ color: "var(--foreground)" }}
-                    inputClass="font-medium text-sm"
+                    inputClass="text-sm font-medium"
                   />
                   <div className="mt-0.5">
                     <InlineEdit
                       value={item.notes || ""}
-                      onSave={(v) => store.updateProgramItem(eventId, i, { notes: v })}
-                      placeholder="Notitie toevoegen..."
+                      onSave={(v) => store.updateProgramItem(eventId, day.id, i, { notes: v })}
+                      placeholder="Notitie..."
                       className="text-xs"
                       style={{ color: "var(--muted)" }}
                       inputClass="text-xs"
                     />
                   </div>
                 </div>
-
-                {/* Delete */}
                 <button
-                  onClick={() => store.deleteProgramItem(eventId, i)}
-                  className="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  onClick={() => store.deleteProgramItem(eventId, day.id, i)}
+                  className="shrink-0 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity mt-0.5"
                 >
-                  <Trash2 size={13} style={{ color: "var(--muted)" }} />
+                  <Trash2 size={11} style={{ color: "var(--muted)" }} />
                 </button>
               </div>
             ))}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProgrammaTab({ eventId }: { eventId: number }) {
+  const store = useStore();
+  const event = store.events.find((e) => e.id === eventId)!;
+
+  function addDay() {
+    const n = event.program.length + 1;
+    store.addProgramDay(eventId, `Dag ${n}`);
+  }
+
+  if (event.program.length === 0) {
+    return (
+      <div className="max-w-lg">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Programma</h2>
         </div>
-      )}
+        <button
+          onClick={addDay}
+          className="w-full py-12 rounded-2xl border-2 border-dashed text-sm transition-colors hover:opacity-70 flex flex-col items-center gap-2"
+          style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+        >
+          <Plus size={24} className="opacity-40" />
+          <span>Start het programma — voeg de eerste dag toe</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+          Programma — {event.program.length} {event.program.length === 1 ? "dag" : "dagen"}
+        </h2>
+        <button
+          onClick={addDay}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+          style={{ backgroundColor: "var(--foreground)", color: "var(--accent-light)" }}
+        >
+          <Plus size={12} /> Dag toevoegen
+        </button>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4" style={{ alignItems: "flex-start" }}>
+        {event.program.map((day) => (
+          <ProgramDayColumn key={day.id} eventId={eventId} day={day} />
+        ))}
+      </div>
     </div>
   );
 }
