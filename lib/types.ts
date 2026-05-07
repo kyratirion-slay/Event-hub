@@ -92,7 +92,7 @@ export interface SupplierContact {
 export interface Supplier {
   id: number;
   name: string;
-  category: string; // "event-locaties" | "catering" | "sprekers" | "overig" | custom
+  category: string;
   subcategories: string[];
   address: string;
   city: string;
@@ -101,4 +101,10 @@ export interface Supplier {
   contact: SupplierContact;
   priceIndication: string;
   notes: string;
+  // Extra filter fields (relevant for all, especially sprekers)
+  typeEvent?: string;
+  taal?: string;
+  dagdeelVoorkeur?: string;
+  regio?: string;
+  eerderGebruikt?: boolean;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { events as initialEvents, suppliers as initialSuppliers, defaultEventLocatieSubcats } from "./mockData";
+import { events as initialEvents, suppliers as initialSuppliers, defaultEventLocatieSubcats, defaultSprekerSubcats } from "./mockData";
 import type {
   Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, Status, NoteWindow, Supplier,
 } from "./types";
@@ -57,6 +57,8 @@ interface StoreContextType {
   addEventLocatieSubcat(name: string): void;
   customSupplierCats: string[];
   addCustomSupplierCat(name: string): void;
+  sprekerSubcats: string[];
+  addSprekerSubcat(name: string): void;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -118,6 +120,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     loadFromStorage("eventhub-custom-cats", [])
   );
 
+  const [sprekerSubcats, setSprekerSubcats] = useState<string[]>(() =>
+    loadFromStorage("eventhub-spreker-subcats", defaultSprekerSubcats)
+  );
+
   useEffect(() => {
     try {
       localStorage.setItem("eventhub-version", STORAGE_VERSION);
@@ -125,8 +131,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("eventhub-suppliers", JSON.stringify(suppliers));
       localStorage.setItem("eventhub-event-subcats", JSON.stringify(eventLocatieSubcats));
       localStorage.setItem("eventhub-custom-cats", JSON.stringify(customSupplierCats));
+      localStorage.setItem("eventhub-spreker-subcats", JSON.stringify(sprekerSubcats));
     } catch { /* ignore */ }
-  }, [events, suppliers, eventLocatieSubcats, customSupplierCats]);
+  }, [events, suppliers, eventLocatieSubcats, customSupplierCats, sprekerSubcats]);
 
   // ─── Event CRUD ────────────────────────────────────────────────────────
 
@@ -414,6 +421,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setCustomSupplierCats((prev) => prev.includes(name) ? prev : [...prev, name]);
   }, []);
 
+  const addSprekerSubcat = useCallback((name: string) => {
+    setSprekerSubcats((prev) => prev.includes(name) ? prev : [...prev, name]);
+  }, []);
+
   return (
     <StoreContext.Provider value={{
       events,
@@ -428,6 +439,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       suppliers, addSupplier, updateSupplier, deleteSupplier,
       eventLocatieSubcats, addEventLocatieSubcat,
       customSupplierCats, addCustomSupplierCat,
+      sprekerSubcats, addSprekerSubcat,
     }}>
       {children}
     </StoreContext.Provider>
