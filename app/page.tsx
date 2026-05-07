@@ -5,7 +5,7 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import EventCard from "@/components/EventCard";
 import { useStore } from "@/lib/store";
-import { Plus, Search, Bell, Filter, Circle, CheckCircle2, Trash2, CalendarClock } from "lucide-react";
+import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2, CalendarClock } from "lucide-react";
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
 
@@ -46,22 +46,22 @@ function parseDutchDeadline(deadline: string | undefined, eventDate: string): Da
 
 function GlobalTodosWidget() {
   const store = useStore();
+  const [tab, setTab] = useState<"open" | "voltooid">("open");
   const [adding, setAdding] = useState(false);
   const [newText, setNewText] = useState("");
   const [newDeadline, setNewDeadline] = useState("");
-  const [newCategory, setNewCategory] = useState("");
   const [targetEventId, setTargetEventId] = useState<number | "">("");
 
   const today = new Date();
   const nextWeek = new Date(today);
   nextWeek.setDate(today.getDate() + 7);
 
+  // "Komende week" tab: todos with deadline in next 7 days (open + done), plus a few open ones without deadline
   const upcoming = store.events
     .filter((e) => e.status !== "afgerond")
     .flatMap((e) =>
       e.todos
         .filter((t) => {
-          if (t.status === "done") return false;
           const d = parseDutchDeadline(t.deadline, e.date);
           return d !== null && d >= today && d <= nextWeek;
         })
@@ -84,15 +84,72 @@ function GlobalTodosWidget() {
 
   const displayTodos = [...upcoming, ...allOpen].slice(0, 10);
 
+  // "Voltooid" tab: all done todos across non-finished events
+  const doneTodos = store.events
+    .filter((e) => e.status !== "afgerond")
+    .flatMap((e) =>
+      e.todos
+        .filter((t) => t.status === "done")
+        .map((t) => ({ ...t, eventId: e.id, eventName: e.name, coverColor: e.coverColor }))
+    );
+
   function addTodo() {
     if (!newText.trim() || !targetEventId) return;
     store.addTodo(Number(targetEventId), {
       text: newText.trim(),
       status: "open",
       deadline: newDeadline.trim() || undefined,
-      category: newCategory.trim() || "Algemeen",
+      category: "Algemeen",
     });
-    setNewText(""); setNewDeadline(""); setNewCategory(""); setTargetEventId(""); setAdding(false);
+    setNewText(""); setNewDeadline(""); setTargetEventId(""); setAdding(false);
+  }
+
+  function TodoRow({ todo, i, total }: { todo: typeof displayTodos[0]; i: number; total: number }) {
+    const done = todo.status === "done";
+    return (
+      <div
+        key={`${todo.eventId}-${todo.id}`}
+        className="flex items-center gap-3 px-5 py-3"
+        style={{ borderBottom: i < total - 1 ? "1px solid var(--border)" : "none" }}
+      >
+        <button
+          onClick={() => store.toggleTodo(todo.eventId, todo.id)}
+          className="shrink-0 transition-opacity hover:opacity-70"
+        >
+          {done
+            ? <CheckCircle2 size={15} style={{ color: "#10b981" }} />
+            : <Circle size={15} style={{ color: "var(--border)" }} />
+          }
+        </button>
+        <span
+          className="flex-1 text-sm truncate"
+          style={{
+            color: done ? "var(--muted)" : "var(--foreground)",
+            textDecoration: done ? "line-through" : "none",
+          }}
+        >
+          {todo.text}
+        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className="text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ backgroundColor: `${todo.coverColor}22`, color: todo.coverColor }}
+          >
+            {todo.eventName.split(" ")[0]}
+          </span>
+          {todo.deadline && !done && (
+            <span className="text-xs" style={{ color: "var(--muted)" }}>{todo.deadline}</span>
+          )}
+          <button
+            onClick={() => store.deleteTodo(todo.eventId, todo.id)}
+            className="opacity-30 hover:opacity-100 transition-opacity"
+            title="Verwijderen"
+          >
+            <Trash2 size={12} style={{ color: "var(--muted)" }} />
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -100,22 +157,47 @@ function GlobalTodosWidget() {
       className="rounded-xl overflow-hidden"
       style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
     >
-      <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)", backgroundColor: "var(--background)" }}>
-        <div className="flex items-center gap-2">
-          <CalendarClock size={14} style={{ color: "var(--accent)" }} />
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-5 py-3 border-b"
+        style={{ borderColor: "var(--border)", backgroundColor: "var(--background)" }}
+      >
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setTab("open")}
+            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+            style={tab === "open"
+              ? { backgroundColor: "var(--foreground)", color: "var(--accent-light)" }
+              : { color: "var(--muted)" }
+            }
+          >
+            <CalendarClock size={12} />
             Komende week
-          </span>
+          </button>
+          <button
+            onClick={() => setTab("voltooid")}
+            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+            style={tab === "voltooid"
+              ? { backgroundColor: "var(--foreground)", color: "var(--accent-light)" }
+              : { color: "var(--muted)" }
+            }
+          >
+            <CheckCircle2 size={12} />
+            Voltooid {doneTodos.length > 0 && `(${doneTodos.length})`}
+          </button>
         </div>
-        <button
-          onClick={() => setAdding(true)}
-          className="flex items-center gap-1 text-xs font-medium"
-          style={{ color: "var(--accent)" }}
-        >
-          <Plus size={12} /> Taak
-        </button>
+        {tab === "open" && (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-1 text-xs font-medium"
+            style={{ color: "var(--accent)" }}
+          >
+            <Plus size={12} /> Taak
+          </button>
+        )}
       </div>
 
+      {/* Add form */}
       {adding && (
         <div className="px-5 py-4 border-b space-y-3" style={{ borderColor: "var(--border)" }}>
           <input
@@ -163,43 +245,36 @@ function GlobalTodosWidget() {
         </div>
       )}
 
-      {displayTodos.length === 0 ? (
-        <div className="px-5 py-8 text-center">
-          <CheckCircle2 size={22} className="mx-auto mb-2" style={{ color: "#10b981" }} />
-          <p className="text-sm" style={{ color: "var(--muted)" }}>Geen openstaande taken deze week.</p>
-        </div>
-      ) : (
-        <div>
-          {displayTodos.map((todo, i) => (
-            <div
-              key={`${todo.eventId}-${todo.id}`}
-              className="flex items-center gap-3 px-5 py-3"
-              style={{ borderBottom: i < displayTodos.length - 1 ? "1px solid var(--border)" : "none" }}
-            >
-              <button onClick={() => store.toggleTodo(todo.eventId, todo.id)} className="shrink-0">
-                <Circle size={14} className="hover:opacity-60 transition-opacity" style={{ color: "var(--border)" }} />
-              </button>
-              <span className="flex-1 text-sm truncate" style={{ color: "var(--foreground)" }}>{todo.text}</span>
-              <div className="flex items-center gap-2 shrink-0">
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ backgroundColor: `${todo.coverColor}22`, color: todo.coverColor }}
-                >
-                  {todo.eventName.split(" ")[0]}
-                </span>
-                {todo.deadline && (
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>{todo.deadline}</span>
-                )}
-                <button
-                  onClick={() => store.deleteTodo(todo.eventId, todo.id)}
-                  className="opacity-30 hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 size={12} style={{ color: "var(--muted)" }} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Tab: open */}
+      {tab === "open" && (
+        displayTodos.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <CheckCircle2 size={22} className="mx-auto mb-2" style={{ color: "#10b981" }} />
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Geen openstaande taken deze week.</p>
+          </div>
+        ) : (
+          <div>
+            {displayTodos.map((todo, i) => (
+              <TodoRow key={`${todo.eventId}-${todo.id}`} todo={todo} i={i} total={displayTodos.length} />
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Tab: voltooid */}
+      {tab === "voltooid" && (
+        doneTodos.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <Circle size={22} className="mx-auto mb-2" style={{ color: "var(--border)" }} />
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Nog geen voltooide taken.</p>
+          </div>
+        ) : (
+          <div>
+            {doneTodos.map((todo, i) => (
+              <TodoRow key={`${todo.eventId}-${todo.id}`} todo={todo} i={i} total={doneTodos.length} />
+            ))}
+          </div>
+        )
       )}
     </div>
   );
@@ -209,17 +284,28 @@ function GlobalTodosWidget() {
 
 export default function DashboardPage() {
   const store = useStore();
+  const [eventSearch, setEventSearch] = useState("");
 
-  const dashboardEvents = store.events.map((e) => ({
-    id: e.id,
-    name: e.name,
-    date: e.date,
-    location: e.location,
-    guests: e.guests,
-    status: e.status,
-    type: e.type,
-    coverColor: e.coverColor,
-  }));
+  const dashboardEvents = store.events
+    .filter((e) => {
+      if (!eventSearch.trim()) return true;
+      const q = eventSearch.toLowerCase();
+      return (
+        e.name.toLowerCase().includes(q) ||
+        e.type.toLowerCase().includes(q) ||
+        e.location.toLowerCase().includes(q)
+      );
+    })
+    .map((e) => ({
+      id: e.id,
+      name: e.name,
+      date: e.date,
+      location: e.location,
+      guests: e.guests,
+      status: e.status,
+      type: e.type,
+      coverColor: e.coverColor,
+    }));
 
   const today = new Date();
   const in30 = new Date(today);
@@ -265,19 +351,11 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-              style={{ backgroundColor: "var(--background)", border: "1px solid var(--border)", color: "var(--muted)" }}
-            >
-              <Search size={14} />
-              <span>Zoeken...</span>
-            </div>
             <button
               className="relative p-2 rounded-lg"
               style={{ backgroundColor: "var(--background)", border: "1px solid var(--border)" }}
             >
               <Bell size={16} style={{ color: "var(--muted)" }} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
             </button>
             <Link
               href="/events"
@@ -312,28 +390,50 @@ export default function DashboardPage() {
           <div className="grid grid-cols-3 gap-6">
             {/* Events — 2/3 width */}
             <div className="col-span-2">
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
                   Alle events
                 </h2>
-                <button
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
-                  style={{ border: "1px solid var(--border)", color: "var(--muted)", backgroundColor: "var(--card)" }}
-                >
-                  <Filter size={11} />
-                  Filter
-                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                {dashboardEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
+
+              {/* Search bar */}
+              <div className="relative mb-4">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted)" }} />
+                <input
+                  value={eventSearch}
+                  onChange={(e) => setEventSearch(e.target.value)}
+                  placeholder="Zoek op naam, type of locatie..."
+                  className="w-full text-sm pl-9 pr-9 py-2 rounded-lg outline-none"
+                  style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", color: "var(--foreground)" }}
+                />
+                {eventSearch && (
+                  <button
+                    onClick={() => setEventSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
+                  >
+                    <X size={12} style={{ color: "var(--muted)" }} />
+                  </button>
+                )}
               </div>
+
+              {dashboardEvents.length === 0 ? (
+                <div className="py-12 text-center rounded-xl" style={{ border: "1px dashed var(--border)" }}>
+                  <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
+                    Geen events gevonden voor &ldquo;{eventSearch}&rdquo;
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {dashboardEvents.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Global todos — 1/3 width */}
             <div>
-              <h2 className="text-sm font-semibold uppercase tracking-widest mb-5" style={{ color: "var(--muted)" }}>
+              <h2 className="text-sm font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--muted)" }}>
                 Taken
               </h2>
               <GlobalTodosWidget />

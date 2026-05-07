@@ -874,15 +874,16 @@ function SprekerListRow({ supplier, onClick }: { supplier: Supplier; onClick(): 
       <div className="font-semibold text-sm truncate shrink-0" style={{ width: "14rem", color: "var(--foreground)" }}>
         {supplier.name}
       </div>
-      <div className="flex items-center gap-1 flex-wrap shrink-0" style={{ width: "16rem" }}>
-        {supplier.subcategories.slice(0, 2).map(s => (
+      <div className="flex items-center gap-1 shrink-0 overflow-hidden" style={{ width: "16rem" }}>
+        {supplier.subcategories.slice(0, 1).map(s => (
           <span key={s} className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
             style={{ backgroundColor: `${catColor("sprekers")}18`, color: catColor("sprekers") }}>
             {s}
           </span>
         ))}
-        {supplier.subcategories.length > 2 && (
-          <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>+{supplier.subcategories.length - 2}</span>
+        {supplier.subcategories.length > 1 && (
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap shrink-0"
+            style={{ color: "var(--muted)", backgroundColor: "var(--background)" }}>+{supplier.subcategories.length - 1}</span>
         )}
       </div>
       <div className="text-xs font-medium shrink-0" style={{ width: "7rem", color: "var(--foreground)" }}>
@@ -1210,11 +1211,15 @@ export default function LeveranciersPage() {
                       <div className="font-semibold text-sm shrink-0" style={{ width: "14rem", color: "var(--foreground)" }}>
                         <span className="truncate block">{s.name}</span>
                       </div>
-                      <div className="flex gap-1 shrink-0" style={{ width: "12rem" }}>
-                        {s.subcategories.slice(0, 2).map(sc => (
+                      <div className="flex items-center gap-1 shrink-0 overflow-hidden" style={{ width: "13rem" }}>
+                        {s.subcategories.slice(0, 1).map(sc => (
                           <span key={sc} className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
                             style={{ backgroundColor: `${catColor(s.category)}18`, color: catColor(s.category) }}>{sc}</span>
                         ))}
+                        {s.subcategories.length > 1 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap shrink-0"
+                            style={{ color: "var(--muted)", backgroundColor: "var(--background)" }}>+{s.subcategories.length - 1}</span>
+                        )}
                       </div>
                       <div className="text-xs font-medium shrink-0" style={{ width: "8rem", color: "var(--foreground)" }}>{s.city || "—"}</div>
                       <div className="flex-1 text-xs truncate font-medium" style={{ color: "var(--muted)" }}>{s.notes}</div>

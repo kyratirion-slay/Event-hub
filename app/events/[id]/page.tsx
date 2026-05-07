@@ -1527,9 +1527,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         <header style={{ backgroundColor: "var(--card)", borderBottom: "1px solid var(--border)" }}>
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 px-8 pt-5 pb-3 text-xs" style={{ color: "var(--muted)" }}>
-            <Link href="/events" className="flex items-center gap-1 hover:opacity-70 transition-opacity">
-              <ArrowLeft size={12} /> Events
-            </Link>
+            <button onClick={() => router.back()} className="flex items-center gap-1 hover:opacity-70 transition-opacity">
+              <ArrowLeft size={12} /> Terug
+            </button>
             <ChevronRight size={11} />
             <span style={{ color: "var(--foreground)" }}>
               <InlineEdit
