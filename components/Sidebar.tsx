@@ -3,16 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, Mail,
+  LayoutDashboard, Calendar,
   NotebookPen, Building2,
 } from "lucide-react";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",    href: "/" },
-  { icon: Calendar,        label: "Events",        href: "/events" },
-  { icon: NotebookPen,     label: "Notities",      href: "/vergaderingen" },
-  { icon: Building2,       label: "Leveranciers",  href: "/leveranciers" },
-  { icon: Mail,            label: "Mailgenerator", href: "/mail" },
+  { icon: LayoutDashboard, label: "Dashboard",   href: "/" },
+  { icon: Calendar,        label: "Events",       href: "/events" },
+  { icon: NotebookPen,     label: "Notities",     href: "/vergaderingen" },
+  { icon: Building2,       label: "Leveranciers", href: "/leveranciers" },
 ];
 
 export default function Sidebar() {
