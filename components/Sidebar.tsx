@@ -14,7 +14,7 @@ const navItems = [
   { icon: BookOpen,        label: "Draaiboeken",          href: "/draaiboeken" },
   { icon: Mail,            label: "Mailgenerator",        href: "/mail" },
   { icon: Lightbulb,       label: "Brainstorm",           href: "/brainstorm" },
-  { icon: NotebookPen,     label: "Event voorbereiding",  href: "/vergaderingen" },
+  { icon: NotebookPen,     label: "Event Notities",        href: "/vergaderingen" },
 ];
 
 export default function Sidebar() {
