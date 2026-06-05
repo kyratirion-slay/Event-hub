@@ -4,17 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Calendar, Mail,
-  BookOpen, Lightbulb, NotebookPen, Building2,
+  NotebookPen, Building2,
 } from "lucide-react";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",           href: "/" },
-  { icon: Calendar,        label: "Events",               href: "/events" },
-  { icon: Building2,       label: "Leveranciers",         href: "/leveranciers" },
-  { icon: BookOpen,        label: "Draaiboeken",          href: "/draaiboeken" },
-  { icon: Mail,            label: "Mailgenerator",        href: "/mail" },
-  { icon: Lightbulb,       label: "Brainstorm",           href: "/brainstorm" },
-  { icon: NotebookPen,     label: "Event Notities",        href: "/vergaderingen" },
+  { icon: LayoutDashboard, label: "Dashboard",    href: "/" },
+  { icon: Calendar,        label: "Events",        href: "/events" },
+  { icon: NotebookPen,     label: "Notities",      href: "/vergaderingen" },
+  { icon: Building2,       label: "Leveranciers",  href: "/leveranciers" },
+  { icon: Mail,            label: "Mailgenerator", href: "/mail" },
 ];
 
 export default function Sidebar() {
