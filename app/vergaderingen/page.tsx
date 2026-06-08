@@ -522,9 +522,9 @@ export default function EventNotitiesPage() {
       <style>{`
         [contenteditable] h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75rem 0 0.4rem; }
         [contenteditable] h2 { font-size: 1.15rem; font-weight: 600; margin: 0.6rem 0 0.3rem; }
-        [contenteditable] ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.25rem 0; }
-        [contenteditable] ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.25rem 0; }
-        [contenteditable] li { margin: 0.15rem 0; }
+        [contenteditable] ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.25rem 0; }
+        [contenteditable] ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.25rem 0; }
+        [contenteditable] li { display: list-item !important; margin: 0.15rem 0; }
         [contenteditable] p { margin: 0.2rem 0; }
         [contenteditable][data-placeholder]:empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; }
       `}</style>
