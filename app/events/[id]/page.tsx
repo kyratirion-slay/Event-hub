@@ -1522,6 +1522,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     <div className="flex h-full min-h-screen">
       <Sidebar />
 
+      <style>{`
+        [contenteditable] ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.25rem 0; }
+        [contenteditable] ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.25rem 0; }
+        [contenteditable] li { display: list-item !important; margin: 0.1rem 0; }
+      `}</style>
+
       <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "var(--background)" }}>
         {/* ── Header ── */}
         <header style={{ backgroundColor: "var(--card)", borderBottom: "1px solid var(--border)" }}>
