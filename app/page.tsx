@@ -202,6 +202,7 @@ function GlobalTodosWidget() {
         <div className="px-5 py-4 border-b space-y-3" style={{ borderColor: "var(--border)" }}>
           <input
             autoFocus
+            spellCheck={true}
             placeholder="Omschrijving taak..."
             value={newText}
             onChange={(e) => setNewText(e.target.value)}

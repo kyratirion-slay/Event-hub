@@ -346,6 +346,7 @@ export default function EventNotitiesPage() {
                         onClick={(e) => e.stopPropagation()}
                         className="flex-1 text-sm rounded px-1 outline-none"
                         style={{ border: "1px solid var(--accent)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                        spellCheck={true}
                         autoFocus
                       />
                     ) : (
@@ -429,6 +430,7 @@ export default function EventNotitiesPage() {
                         onClick={(e) => e.stopPropagation()}
                         className="flex-1 text-sm rounded px-1 outline-none"
                         style={{ border: "1px solid var(--accent)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                        spellCheck={true}
                         autoFocus
                       />
                     ) : (
@@ -496,6 +498,7 @@ export default function EventNotitiesPage() {
                     ref={editorRef}
                     contentEditable
                     suppressContentEditableWarning
+                    spellCheck={true}
                     onInput={handleEditorInput}
                     data-placeholder="Begin hier met typen…"
                     className="outline-none min-h-full text-sm leading-relaxed"

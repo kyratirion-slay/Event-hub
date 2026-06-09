@@ -63,8 +63,8 @@ function InlineEdit({
       style: { ...style, ...inputStyle, borderBottom: "1.5px solid var(--accent)" },
     };
     return multiline
-      ? <textarea {...shared} rows={rows} style={{ ...shared.style, resize: "vertical" }} />
-      : <input {...shared} />;
+      ? <textarea {...shared} spellCheck={true} rows={rows} style={{ ...shared.style, resize: "vertical" }} />
+      : <input {...shared} spellCheck={true} />;
   }
 
   return (
@@ -377,6 +377,7 @@ function TodoRow({
         {editingText ? (
           <input
             autoFocus
+            spellCheck={true}
             value={textDraft}
             onChange={(e) => setTextDraft(e.target.value)}
             onBlur={saveText}
@@ -480,6 +481,7 @@ function TodosTab({ eventId }: { eventId: number }) {
         <div className="rounded-xl p-4 mb-4 space-y-3" style={{ border: "1px solid var(--accent)", backgroundColor: "var(--card)" }}>
           <input
             autoFocus
+            spellCheck={true}
             placeholder="Omschrijving..."
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
@@ -625,6 +627,7 @@ function UitwerkingTab({ eventId }: { eventId: number }) {
               </div>
               <textarea
                 rows={meta.rows}
+                spellCheck={true}
                 value={event.briefing[key]}
                 onChange={(e) => store.updateBriefingField(eventId, key, e.target.value)}
                 placeholder={meta.placeholder}
@@ -799,6 +802,7 @@ function BudgetTab({ eventId }: { eventId: number }) {
                     >
                       <span />
                       <input
+                        spellCheck={true}
                         value={item.description}
                         onChange={(e) => store.updateBudgetItem(eventId, cat.id, item.id, { description: e.target.value })}
                         placeholder="Omschrijving..."
@@ -855,6 +859,7 @@ function BudgetTab({ eventId }: { eventId: number }) {
               <div className="flex items-center gap-2">
                 <input
                   autoFocus
+                  spellCheck={true}
                   placeholder="Naam categorie..."
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
@@ -980,6 +985,7 @@ function MilestoneItem({
         {editingTitle ? (
           <input
             autoFocus
+            spellCheck={true}
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
             onBlur={saveTitle}
@@ -1072,6 +1078,7 @@ function TijdlijnTab({ eventId }: { eventId: number }) {
             />
             <input
               autoFocus
+              spellCheck={true}
               placeholder="Mijlpaal omschrijving..."
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
@@ -1285,6 +1292,7 @@ function FloatingNoteWindow({
         {editingTitle ? (
           <input
             autoFocus
+            spellCheck={true}
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
             onBlur={() => { store.updateNoteWindow(eventId, win.id, { title: titleDraft || "Venster" }); setEditingTitle(false); }}
@@ -1373,6 +1381,7 @@ function FloatingNoteWindow({
         ref={contentRef}
         contentEditable
         suppressContentEditableWarning
+        spellCheck={true}
         onInput={handleContentInput}
         onMouseDown={(e) => e.stopPropagation()}
         data-placeholder="Schrijf hier je notities..."

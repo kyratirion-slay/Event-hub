@@ -415,7 +415,7 @@ function SupplierForm({
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         <div>
           <label className="block" style={labelCss}>Naam *</label>
-          <input autoFocus required value={name} onChange={e => setName(e.target.value)}
+          <input autoFocus required spellCheck={true} value={name} onChange={e => setName(e.target.value)}
             placeholder="Naam van de leverancier"
             className="w-full text-sm px-3 py-2.5 rounded-lg outline-none" style={inp} />
         </div>
@@ -485,7 +485,7 @@ function SupplierForm({
         <div>
           <label className="block" style={labelCss}>Contactpersoon</label>
           <div className="space-y-2">
-            <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Naam"
+            <input spellCheck={true} value={cName} onChange={e => setCName(e.target.value)} placeholder="Naam"
               className="w-full text-sm px-3 py-2.5 rounded-lg outline-none" style={inp} />
             <input value={cPhone} onChange={e => setCPhone(e.target.value)} placeholder="Telefoonnummer"
               className="w-full text-sm px-3 py-2.5 rounded-lg outline-none" style={inp} />
@@ -552,7 +552,7 @@ function SupplierForm({
 
         <div>
           <label className="block" style={labelCss}>Notities & beoordeling</label>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          <textarea spellCheck={true} value={notes} onChange={e => setNotes(e.target.value)}
             placeholder="Ervaringen, aandachtspunten, beoordeling..." rows={4}
             className="w-full text-sm px-3 py-2.5 rounded-lg outline-none resize-none" style={inp} />
         </div>
@@ -745,6 +745,7 @@ function SupplierDetail({
             <div>
               <textarea
                 autoFocus
+                spellCheck={true}
                 value={notesDraft}
                 onChange={e => setNotesDraft(e.target.value)}
                 rows={5}

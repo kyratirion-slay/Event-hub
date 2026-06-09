@@ -136,6 +136,7 @@ function NewEventModal({ onClose }: { onClose(): void }) {
             </label>
             <input
               autoFocus
+              spellCheck={true}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Naam van het event"
