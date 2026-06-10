@@ -765,6 +765,19 @@ function BudgetTab({ eventId }: { eventId: number }) {
               {formatEuro(remaining)}
             </span>
           </div>
+
+          {/* Per persoon */}
+          {event.guests > 0 && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--muted)" }}>Per persoon</div>
+              <span style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--foreground)" }}>
+                {formatEuro(totalIncl / event.guests)}
+              </span>
+              <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                excl. BTW: {formatEuro(totalExcl / event.guests)} · {event.guests} pers.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Table */}
