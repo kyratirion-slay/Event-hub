@@ -221,8 +221,7 @@ function ProgramDayColumn({ eventId, day }: { eventId: number; day: ProgramDay }
             + Regel toevoegen
           </button>
         ) : (
-          <div className="relative px-1 py-2">
-            <div className="absolute left-[3.75rem] top-0 bottom-0 w-px" style={{ backgroundColor: "var(--border)" }} />
+          <div className="px-1 py-2">
             {day.items.map((item, i) => (
               <div
                 key={i}
@@ -234,7 +233,7 @@ function ProgramDayColumn({ eventId, day }: { eventId: number; day: ProgramDay }
                   setDragIndex(null); setDragOver(null);
                 }}
                 onDragEnd={() => { setDragIndex(null); setDragOver(null); }}
-                className="flex gap-2 items-start py-2.5 relative group"
+                className="flex gap-2 items-start py-2.5 group"
                 style={{
                   opacity: dragIndex === i ? 0.4 : 1,
                   backgroundColor: dragOver === i && dragIndex !== i ? "rgba(232,111,163,0.05)" : "transparent",
@@ -244,7 +243,7 @@ function ProgramDayColumn({ eventId, day }: { eventId: number; day: ProgramDay }
                 <div className="w-4 shrink-0 flex justify-center pt-1 opacity-0 group-hover:opacity-30 cursor-grab transition-opacity">
                   <GripVertical size={12} style={{ color: "var(--muted)" }} />
                 </div>
-                <div className="w-10 shrink-0">
+                <div className="shrink-0 min-w-[2.5rem] text-right">
                   <InlineEdit
                     value={item.time}
                     onSave={(v) => store.updateProgramItem(eventId, day.id, i, { time: v })}
@@ -254,7 +253,11 @@ function ProgramDayColumn({ eventId, day }: { eventId: number; day: ProgramDay }
                     inputClass="text-xs font-bold"
                   />
                 </div>
-                <div className="w-2 h-2 rounded-full shrink-0 mt-1 z-10" style={{ backgroundColor: "var(--accent)", outline: "3px solid var(--card)" }} />
+                {/* Dot + continuous line segment per item */}
+                <div className="relative shrink-0 w-3 self-stretch flex flex-col items-center">
+                  <div className="absolute top-0 bottom-0 w-px" style={{ backgroundColor: "var(--border)" }} />
+                  <div className="w-2 h-2 rounded-full relative z-10 mt-1.5 shrink-0" style={{ backgroundColor: "var(--accent)", outline: "3px solid var(--card)" }} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <InlineEdit
                     value={item.title}
