@@ -35,6 +35,7 @@ interface StoreContextType {
   updateBriefingOrder(eventId: number, order: Array<keyof EventBriefing>): void;
   // Budget
   updateTotalBudget(eventId: number, totalBudget: number): void;
+  updateBudgetIsIncl(eventId: number, isIncl: boolean): void;
   addBudgetCategory(eventId: number, name: string): void;
   renameBudgetCategory(eventId: number, categoryId: number, name: string): void;
   deleteBudgetCategory(eventId: number, categoryId: number): void;
@@ -301,6 +302,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, totalBudget })));
   }, []);
 
+  const updateBudgetIsIncl = useCallback((eventId: number, isIncl: boolean) => {
+    setEvents((prev) => updateEvent(prev, eventId, (e) => ({ ...e, budgetIsIncl: isIncl })));
+  }, []);
+
   const addBudgetCategory = useCallback((eventId: number, name: string) => {
     setEvents((prev) =>
       updateEvent(prev, eventId, (e) => ({
@@ -480,7 +485,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       addProgramItem, updateProgramItem, deleteProgramItem, reorderProgramItems,
       toggleTodo, addTodo, updateTodo, deleteTodo,
       updateBriefingField, updateBriefingOrder,
-      updateTotalBudget, addBudgetCategory, renameBudgetCategory, deleteBudgetCategory,
+      updateTotalBudget, updateBudgetIsIncl, addBudgetCategory, renameBudgetCategory, deleteBudgetCategory,
       addBudgetItem, updateBudgetItem, deleteBudgetItem,
       addNoteWindow, updateNoteWindow, deleteNoteWindow,
       toggleTimelineItem, addTimelineItem, updateTimelineItem, deleteTimelineItem, adoptSuggestion,

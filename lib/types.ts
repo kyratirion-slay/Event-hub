@@ -78,6 +78,7 @@ export interface Event {
   type: string;
   coverColor: string;
   totalBudget: number;
+  budgetIsIncl?: boolean;
   briefing: EventBriefing;
   program: ProgramDay[];
   todos: Todo[];

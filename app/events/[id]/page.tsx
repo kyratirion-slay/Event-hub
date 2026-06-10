@@ -689,12 +689,18 @@ function BudgetTab({ eventId }: { eventId: number }) {
   const [addingCat, setAddingCat] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
 
-  const totalSpent = event.budgetCategories.reduce(
-    (sum, cat) => sum + cat.items.reduce((s, item) => s + item.amountExclVat * (1 + item.vatRate / 100), 0),
-    0
+  const totalExcl = event.budgetCategories.reduce(
+    (sum, cat) => sum + cat.items.reduce((s, item) => s + item.amountExclVat, 0), 0
   );
-  const remaining = event.totalBudget - totalSpent;
-  const pct = event.totalBudget > 0 ? Math.min((totalSpent / event.totalBudget) * 100, 100) : 0;
+  const totalVat = event.budgetCategories.reduce(
+    (sum, cat) => sum + cat.items.reduce((s, item) => s + item.amountExclVat * item.vatRate / 100, 0), 0
+  );
+  const totalIncl = totalExcl + totalVat;
+
+  const budgetIsIncl = event.budgetIsIncl ?? false;
+  const budgetCompare = budgetIsIncl ? totalIncl : totalExcl;
+  const remaining = event.totalBudget - budgetCompare;
+  const pct = event.totalBudget > 0 ? Math.min((budgetCompare / event.totalBudget) * 100, 100) : 0;
 
   function toggleCollapse(id: number) {
     setCollapsed((prev) => {
@@ -712,25 +718,47 @@ function BudgetTab({ eventId }: { eventId: number }) {
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: 0 }}>
-      {/* Scrollable table area */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {/* Total budget input */}
-        <div className="flex items-center gap-8 px-2 mb-4">
+
+        {/* Top summary */}
+        <div className="flex items-start gap-8 px-2 mb-4">
+          {/* Budget + excl/incl toggle */}
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--muted)" }}>Totaalbudget</div>
-            <InlineNumber
-              value={event.totalBudget}
-              onSave={(v) => store.updateTotalBudget(eventId, v)}
-              prefix="€ "
-              style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--foreground)" }}
-            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <InlineNumber
+                value={event.totalBudget}
+                onSave={(v) => store.updateTotalBudget(eventId, v)}
+                prefix="€ "
+                style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--foreground)" }}
+              />
+              <div className="flex rounded-lg overflow-hidden border text-xs font-semibold" style={{ borderColor: "var(--border)" }}>
+                <button
+                  onClick={() => store.updateBudgetIsIncl(eventId, false)}
+                  className="px-2 py-0.5 transition-colors"
+                  style={{ backgroundColor: !budgetIsIncl ? "var(--foreground)" : "transparent", color: !budgetIsIncl ? "var(--accent-light)" : "var(--muted)" }}
+                >excl.</button>
+                <button
+                  onClick={() => store.updateBudgetIsIncl(eventId, true)}
+                  className="px-2 py-0.5 transition-colors"
+                  style={{ backgroundColor: budgetIsIncl ? "var(--foreground)" : "transparent", color: budgetIsIncl ? "var(--accent-light)" : "var(--muted)" }}
+                >incl.</button>
+              </div>
+            </div>
           </div>
+
+          {/* Besteed — primary value based on mode, secondary below */}
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--muted)" }}>Besteed</div>
-            <span style={{ fontSize: "1.4rem", fontWeight: 700, color: totalSpent > event.totalBudget ? "#dc2626" : "var(--foreground)" }}>
-              {formatEuro(totalSpent)}
+            <span style={{ fontSize: "1.4rem", fontWeight: 700, color: budgetCompare > event.totalBudget ? "#dc2626" : "var(--foreground)" }}>
+              {formatEuro(budgetIsIncl ? totalIncl : totalExcl)}
             </span>
+            <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+              {budgetIsIncl ? `excl. BTW: ${formatEuro(totalExcl)}` : `incl. BTW: ${formatEuro(totalIncl)}`}
+            </div>
           </div>
+
+          {/* Resterend */}
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--muted)" }}>Resterend</div>
             <span style={{ fontSize: "1.4rem", fontWeight: 700, color: remaining < 0 ? "#dc2626" : "#16a34a" }}>
@@ -741,7 +769,7 @@ function BudgetTab({ eventId }: { eventId: number }) {
 
         {/* Table */}
         <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
-          {/* Header row */}
+          {/* Header */}
           <div
             className="grid text-xs font-semibold uppercase tracking-widest px-4 py-2 border-b"
             style={{ gridTemplateColumns: "28px 1fr 110px 60px 110px 32px", borderColor: "var(--border)", backgroundColor: "var(--background)", color: "var(--muted)" }}
@@ -755,7 +783,9 @@ function BudgetTab({ eventId }: { eventId: number }) {
           </div>
 
           {event.budgetCategories.map((cat) => {
-            const catTotal = cat.items.reduce((s, item) => s + item.amountExclVat * (1 + item.vatRate / 100), 0);
+            const catExcl = cat.items.reduce((s, item) => s + item.amountExclVat, 0);
+            const catVat  = cat.items.reduce((s, item) => s + item.amountExclVat * item.vatRate / 100, 0);
+            const catIncl = catExcl + catVat;
             const isCollapsed = collapsed.has(cat.id);
             return (
               <div key={cat.id}>
@@ -767,25 +797,26 @@ function BudgetTab({ eventId }: { eventId: number }) {
                   <button onClick={() => toggleCollapse(cat.id)} className="opacity-50 hover:opacity-100 transition-opacity">
                     {isCollapsed ? <ChevronRight size={14} style={{ color: "var(--muted)" }} /> : <ChevronDown size={14} style={{ color: "var(--muted)" }} />}
                   </button>
-                  <InlineEdit
-                    value={cat.name}
-                    onSave={(v) => store.renameBudgetCategory(eventId, cat.id, v)}
-                    className="text-sm font-semibold"
-                    style={{ color: "var(--foreground)" }}
-                    inputClass="text-sm font-semibold"
-                  />
-                  <span className="text-sm font-semibold text-right" style={{ color: "var(--foreground)" }}>
-                    {formatEuro(catTotal)}
-                  </span>
-                  <span />
-                  <button
-                    onClick={() => store.addBudgetItem(eventId, cat.id)}
-                    className="text-xs opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-right"
-                    style={{ color: "var(--accent)" }}
-                    title="Regel toevoegen"
-                  >
-                    <Plus size={13} />
-                  </button>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <InlineEdit
+                      value={cat.name}
+                      onSave={(v) => store.renameBudgetCategory(eventId, cat.id, v)}
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--foreground)" }}
+                      inputClass="text-sm font-semibold"
+                    />
+                    <button
+                      onClick={() => store.addBudgetItem(eventId, cat.id)}
+                      className="opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity shrink-0"
+                      title="Regel toevoegen"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                  <span className="text-sm font-semibold text-right" style={{ color: "var(--foreground)" }}>{formatEuro(catExcl)}</span>
+                  <span className="text-xs text-right" style={{ color: "var(--muted)" }}>{catVat > 0 ? formatEuro(catVat) : ""}</span>
+                  <span className="text-sm font-semibold text-right" style={{ color: "var(--foreground)" }}>{formatEuro(catIncl)}</span>
                   <button
                     onClick={() => store.deleteBudgetCategory(eventId, cat.id)}
                     className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity justify-self-center"
@@ -796,7 +827,8 @@ function BudgetTab({ eventId }: { eventId: number }) {
 
                 {/* Items */}
                 {!isCollapsed && cat.items.map((item) => {
-                  const inclVat = item.amountExclVat * (1 + item.vatRate / 100);
+                  const itemVat  = item.amountExclVat * item.vatRate / 100;
+                  const itemIncl = item.amountExclVat + itemVat;
                   return (
                     <div
                       key={item.id}
@@ -829,7 +861,7 @@ function BudgetTab({ eventId }: { eventId: number }) {
                         />
                         <span className="text-xs" style={{ color: "var(--muted)" }}>%</span>
                       </div>
-                      <span className="text-sm font-medium text-right" style={{ color: "var(--foreground)" }}>{formatEuro(inclVat)}</span>
+                      <span className="text-sm font-medium text-right" style={{ color: "var(--foreground)" }}>{formatEuro(itemIncl)}</span>
                       <button
                         onClick={() => store.deleteBudgetItem(eventId, cat.id, item.id)}
                         className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity justify-self-center"
@@ -856,7 +888,22 @@ function BudgetTab({ eventId }: { eventId: number }) {
             );
           })}
 
-          {/* Add category row */}
+          {/* Grand total row */}
+          {event.budgetCategories.length > 0 && (
+            <div
+              className="grid items-center px-4 py-2.5 border-t"
+              style={{ gridTemplateColumns: "28px 1fr 110px 60px 110px 32px", borderColor: "var(--border)", backgroundColor: "rgba(232,111,163,0.04)" }}
+            >
+              <span />
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Totaal</span>
+              <span className="text-sm font-bold text-right" style={{ color: "var(--foreground)" }}>{formatEuro(totalExcl)}</span>
+              <span className="text-xs font-bold text-right" style={{ color: "var(--muted)" }}>{totalVat > 0 ? formatEuro(totalVat) : ""}</span>
+              <span className="text-sm font-bold text-right" style={{ color: "var(--accent)" }}>{formatEuro(totalIncl)}</span>
+              <span />
+            </div>
+          )}
+
+          {/* Add category */}
           <div className="px-4 py-2.5">
             {addingCat ? (
               <div className="flex items-center gap-2">
@@ -882,31 +929,29 @@ function BudgetTab({ eventId }: { eventId: number }) {
         </div>
       </div>
 
-      {/* Sticky totals bar */}
+      {/* Sticky bottom bar — 1 lijn */}
       <div
-        className="shrink-0 mt-4 rounded-xl px-5 py-3 flex items-center gap-8"
+        className="shrink-0 mt-4 rounded-xl px-5 py-3"
         style={{ backgroundColor: "var(--card)", border: "2px solid var(--border)" }}
       >
-        <div className="flex-1">
-          <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--muted)" }}>
-            <span>{Math.round(pct)}% besteed</span>
-            {remaining < 0 && <span style={{ color: "#dc2626" }}>{formatEuro(Math.abs(remaining))} over budget</span>}
+        <div className="flex items-center gap-6">
+          <div className="flex-1">
+            <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--muted)" }}>
+              <span>{Math.round(pct)}% besteed ({budgetIsIncl ? "incl." : "excl."} BTW)</span>
+              {remaining < 0 && <span style={{ color: "#dc2626" }}>{formatEuro(Math.abs(remaining))} over budget</span>}
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--border)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${pct}%`, backgroundColor: remaining < 0 ? "#dc2626" : "var(--accent)" }}
+              />
+            </div>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--border)" }}>
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${pct}%`, backgroundColor: remaining < 0 ? "#dc2626" : "var(--accent)" }}
-            />
+          <div className="flex items-center gap-4 text-sm font-semibold shrink-0" style={{ borderLeft: "1px solid var(--border)", paddingLeft: "1.5rem" }}>
+            <span style={{ color: "var(--muted)" }}>Excl.: <span style={{ color: "var(--foreground)" }}>{formatEuro(totalExcl)}</span></span>
+            <span style={{ color: "var(--muted)", borderLeft: "1px solid var(--border)", paddingLeft: "1rem" }}>Incl.: <span style={{ color: "var(--foreground)" }}>{formatEuro(totalIncl)}</span></span>
+            <span style={{ color: "var(--muted)", borderLeft: "1px solid var(--border)", paddingLeft: "1rem" }}>Rest: <span style={{ color: remaining < 0 ? "#dc2626" : "#16a34a" }}>{formatEuro(remaining)}</span></span>
           </div>
-        </div>
-        <div className="text-sm font-semibold shrink-0" style={{ color: "var(--muted)" }}>
-          Budget: <span style={{ color: "var(--foreground)" }}>{formatEuro(event.totalBudget)}</span>
-        </div>
-        <div className="text-sm font-semibold shrink-0">
-          Besteed: <span style={{ color: totalSpent > event.totalBudget ? "#dc2626" : "var(--foreground)" }}>{formatEuro(totalSpent)}</span>
-        </div>
-        <div className="text-sm font-semibold shrink-0">
-          Rest: <span style={{ color: remaining < 0 ? "#dc2626" : "#16a34a" }}>{formatEuro(remaining)}</span>
         </div>
       </div>
     </div>
