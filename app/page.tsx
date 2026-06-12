@@ -5,7 +5,7 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import EventCard from "@/components/EventCard";
 import { useStore } from "@/lib/store";
-import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2, CalendarClock } from "lucide-react";
+import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2 } from "lucide-react";
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
 
@@ -52,39 +52,20 @@ function GlobalTodosWidget() {
   const [newDeadline, setNewDeadline] = useState("");
   const [targetEventId, setTargetEventId] = useState<number | "">("");
 
-  const today = new Date();
-  const nextWeek = new Date(today);
-  nextWeek.setDate(today.getDate() + 7);
-
-  // "Komende week" tab: todos with deadline in next 7 days (open + done), plus a few open ones without deadline
-  const upcoming = store.events
+  // All open todos grouped by event
+  const eventGroups = store.events
     .filter((e) => e.status !== "afgerond")
-    .flatMap((e) =>
-      e.todos
-        .filter((t) => {
-          const d = parseDutchDeadline(t.deadline, e.date);
-          return d !== null && d >= today && d <= nextWeek;
-        })
-        .map((t) => ({ ...t, eventId: e.id, eventName: e.name, coverColor: e.coverColor }))
-    )
-    .sort((a, b) => {
-      const da = parseDutchDeadline(a.deadline, "")?.getTime() ?? Infinity;
-      const db = parseDutchDeadline(b.deadline, "")?.getTime() ?? Infinity;
-      return da - db;
-    });
+    .map((e) => ({
+      id: e.id,
+      name: e.name,
+      coverColor: e.coverColor,
+      openTodos: e.todos.filter((t) => t.status === "open"),
+    }))
+    .filter((g) => g.openTodos.length > 0);
 
-  const allOpen = store.events
-    .filter((e) => e.status !== "afgerond")
-    .flatMap((e) =>
-      e.todos
-        .filter((t) => t.status === "open" && !t.deadline)
-        .slice(0, 2)
-        .map((t) => ({ ...t, eventId: e.id, eventName: e.name, coverColor: e.coverColor }))
-    );
+  const totalOpen = eventGroups.reduce((sum, g) => sum + g.openTodos.length, 0);
 
-  const displayTodos = [...upcoming, ...allOpen].slice(0, 10);
-
-  // "Voltooid" tab: all done todos across non-finished events
+  // All done todos across non-finished events
   const doneTodos = store.events
     .filter((e) => e.status !== "afgerond")
     .flatMap((e) =>
@@ -102,54 +83,6 @@ function GlobalTodosWidget() {
       category: "Algemeen",
     });
     setNewText(""); setNewDeadline(""); setTargetEventId(""); setAdding(false);
-  }
-
-  function TodoRow({ todo, i, total }: { todo: typeof displayTodos[0]; i: number; total: number }) {
-    const done = todo.status === "done";
-    return (
-      <div
-        key={`${todo.eventId}-${todo.id}`}
-        className="flex items-center gap-3 px-5 py-3"
-        style={{ borderBottom: i < total - 1 ? "1px solid var(--border)" : "none" }}
-      >
-        <button
-          onClick={() => store.toggleTodo(todo.eventId, todo.id)}
-          className="shrink-0 transition-opacity hover:opacity-70"
-        >
-          {done
-            ? <CheckCircle2 size={15} style={{ color: "#10b981" }} />
-            : <Circle size={15} style={{ color: "var(--border)" }} />
-          }
-        </button>
-        <span
-          className="flex-1 text-sm truncate"
-          style={{
-            color: done ? "var(--muted)" : "var(--foreground)",
-            textDecoration: done ? "line-through" : "none",
-          }}
-        >
-          {todo.text}
-        </span>
-        <div className="flex items-center gap-2 shrink-0">
-          <span
-            className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: `${todo.coverColor}22`, color: todo.coverColor }}
-          >
-            {todo.eventName.split(" ")[0]}
-          </span>
-          {todo.deadline && !done && (
-            <span className="text-xs" style={{ color: "var(--muted)" }}>{todo.deadline}</span>
-          )}
-          <button
-            onClick={() => store.deleteTodo(todo.eventId, todo.id)}
-            className="opacity-30 hover:opacity-100 transition-opacity"
-            title="Verwijderen"
-          >
-            <Trash2 size={12} style={{ color: "var(--muted)" }} />
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -171,8 +104,8 @@ function GlobalTodosWidget() {
               : { color: "var(--muted)" }
             }
           >
-            <CalendarClock size={12} />
-            Komende week
+            <Circle size={12} />
+            Openstaand {totalOpen > 0 && `(${totalOpen})`}
           </button>
           <button
             onClick={() => setTab("voltooid")}
@@ -246,33 +179,114 @@ function GlobalTodosWidget() {
         </div>
       )}
 
-      {/* Tab: open */}
+      {/* Tab: openstaand — grouped by event */}
       {tab === "open" && (
-        displayTodos.length === 0 ? (
-          <div className="px-5 py-8 text-center">
+        eventGroups.length === 0 ? (
+          <div className="px-5 py-10 text-center">
             <CheckCircle2 size={22} className="mx-auto mb-2" style={{ color: "#10b981" }} />
-            <p className="text-sm" style={{ color: "var(--muted)" }}>Geen openstaande taken deze week.</p>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Geen openstaande taken.</p>
           </div>
         ) : (
-          <div>
-            {displayTodos.map((todo, i) => (
-              <TodoRow key={`${todo.eventId}-${todo.id}`} todo={todo} i={i} total={displayTodos.length} />
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 340px)" }}>
+            {eventGroups.map((group) => (
+              <div key={group.id} className="border-b last:border-0" style={{ borderColor: "var(--border)" }}>
+                {/* Event header */}
+                <Link
+                  href={`/events/${group.id}`}
+                  className="flex items-center gap-2.5 px-4 py-2 hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: `${group.coverColor}18`, borderBottom: `1px solid ${group.coverColor}30` }}
+                >
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.coverColor }} />
+                  <span className="text-xs font-bold uppercase tracking-wider flex-1" style={{ color: group.coverColor }}>
+                    {group.name}
+                  </span>
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${group.coverColor}30`, color: group.coverColor }}>
+                    {group.openTodos.length}
+                  </span>
+                </Link>
+
+                {/* Todos in this group */}
+                {group.openTodos.map((todo, i) => (
+                  <div
+                    key={todo.id}
+                    className="flex items-start gap-3 px-4 py-2.5 group/todo"
+                    style={{ borderTop: i > 0 ? "1px solid var(--border)" : "none" }}
+                  >
+                    <button
+                      onClick={() => store.toggleTodo(group.id, todo.id)}
+                      className="shrink-0 mt-0.5 transition-opacity hover:opacity-70"
+                    >
+                      <Circle size={14} style={{ color: group.coverColor }} />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm leading-snug" style={{ color: "var(--foreground)" }}>
+                        {todo.text}
+                      </div>
+                      {todo.notes && (
+                        <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--muted)" }}>
+                          {todo.notes}
+                        </div>
+                      )}
+                      {todo.deadline && (
+                        <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                          {todo.deadline}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => store.deleteTodo(group.id, todo.id)}
+                      className="opacity-0 group-hover/todo:opacity-40 hover:!opacity-100 transition-opacity shrink-0 mt-0.5"
+                      title="Verwijderen"
+                    >
+                      <Trash2 size={11} style={{ color: "var(--muted)" }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             ))}
           </div>
         )
       )}
 
-      {/* Tab: voltooid */}
+      {/* Tab: voltooid — flat list with event badge */}
       {tab === "voltooid" && (
         doneTodos.length === 0 ? (
-          <div className="px-5 py-8 text-center">
+          <div className="px-5 py-10 text-center">
             <Circle size={22} className="mx-auto mb-2" style={{ color: "var(--border)" }} />
             <p className="text-sm" style={{ color: "var(--muted)" }}>Nog geen voltooide taken.</p>
           </div>
         ) : (
-          <div>
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 340px)" }}>
             {doneTodos.map((todo, i) => (
-              <TodoRow key={`${todo.eventId}-${todo.id}`} todo={todo} i={i} total={doneTodos.length} />
+              <div
+                key={`${todo.eventId}-${todo.id}`}
+                className="flex items-start gap-3 px-4 py-2.5 group/todo"
+                style={{ borderBottom: i < doneTodos.length - 1 ? "1px solid var(--border)" : "none" }}
+              >
+                <button
+                  onClick={() => store.toggleTodo(todo.eventId, todo.id)}
+                  className="shrink-0 mt-0.5 transition-opacity hover:opacity-70"
+                >
+                  <CheckCircle2 size={14} style={{ color: "#10b981" }} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm leading-snug line-through" style={{ color: "var(--muted)" }}>
+                    {todo.text}
+                  </div>
+                  <span
+                    className="text-xs mt-0.5 inline-block px-1.5 py-0.5 rounded-full font-medium"
+                    style={{ backgroundColor: `${todo.coverColor}20`, color: todo.coverColor }}
+                  >
+                    {todo.eventName}
+                  </span>
+                </div>
+                <button
+                  onClick={() => store.deleteTodo(todo.eventId, todo.id)}
+                  className="opacity-0 group-hover/todo:opacity-40 hover:!opacity-100 transition-opacity shrink-0 mt-0.5"
+                >
+                  <Trash2 size={11} style={{ color: "var(--muted)" }} />
+                </button>
+              </div>
             ))}
           </div>
         )
@@ -388,9 +402,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Two-column layout: events + global todos */}
-          <div className="grid grid-cols-3 gap-6">
-            {/* Events — 2/3 width */}
-            <div className="col-span-2">
+          <div className="grid grid-cols-5 gap-6">
+            {/* Events — 3/5 width */}
+            <div className="col-span-3">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
                   Alle events
@@ -432,8 +446,8 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Global todos — 1/3 width */}
-            <div>
+            {/* Global todos — 2/5 width */}
+            <div className="col-span-2">
               <h2 className="text-sm font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--muted)" }}>
                 Taken
               </h2>

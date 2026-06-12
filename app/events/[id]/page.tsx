@@ -350,32 +350,37 @@ function TodoRow({
   todo,
   eventId,
 }: {
-  todo: { id: number; text: string; status: "open" | "done"; deadline?: string; category: string };
+  todo: { id: number; text: string; status: "open" | "done"; deadline?: string; category: string; notes?: string };
   eventId: number;
 }) {
   const store = useStore();
   const [editingText, setEditingText] = useState(false);
   const [textDraft, setTextDraft] = useState(todo.text);
+  const [notesDraft, setNotesDraft] = useState(todo.notes || "");
 
   function saveText() {
     if (textDraft.trim()) store.updateTodo(eventId, todo.id, { text: textDraft.trim() });
     setEditingText(false);
   }
 
+  function saveNotes() {
+    store.updateTodo(eventId, todo.id, { notes: notesDraft.trim() || undefined });
+  }
+
   return (
     <div
-      className="flex items-center gap-3 px-5 py-3 group"
+      className="flex items-start gap-3 px-5 py-3 group"
       style={{ borderBottom: "1px solid var(--border)", opacity: todo.status === "done" ? 0.6 : 1 }}
     >
       {/* Toggle */}
-      <button onClick={() => store.toggleTodo(eventId, todo.id)} className="shrink-0">
+      <button onClick={() => store.toggleTodo(eventId, todo.id)} className="shrink-0 mt-0.5">
         {todo.status === "done"
           ? <CheckCircle2 size={16} style={{ color: "#10b981" }} />
           : <Circle size={16} className="hover:opacity-60 transition-opacity" style={{ color: "var(--border)" }} />
         }
       </button>
 
-      {/* Text */}
+      {/* Text + notes */}
       <div className="flex-1 min-w-0">
         {editingText ? (
           <input
@@ -391,7 +396,7 @@ function TodoRow({
         ) : (
           <span
             onClick={() => { setTextDraft(todo.text); setEditingText(true); }}
-            className="text-sm cursor-text"
+            className="text-sm cursor-text block"
             style={{
               color: "var(--foreground)",
               textDecoration: todo.status === "done" ? "line-through" : "none",
@@ -400,6 +405,18 @@ function TodoRow({
             {todo.text}
           </span>
         )}
+        {/* Notes sub-line — always visible if has content, else on hover */}
+        <input
+          spellCheck={true}
+          value={notesDraft}
+          onChange={(e) => setNotesDraft(e.target.value)}
+          onBlur={saveNotes}
+          placeholder="Notitie toevoegen..."
+          className={`w-full text-xs bg-transparent outline-none mt-0.5 transition-opacity ${
+            notesDraft ? "opacity-60" : "opacity-0 group-hover:opacity-40 focus:opacity-60"
+          }`}
+          style={{ color: "var(--muted)" }}
+        />
       </div>
 
       {/* Category — always shows edit hint */}

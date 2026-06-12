@@ -18,6 +18,7 @@ export interface Todo {
   status: "open" | "done";
   deadline?: string;
   category: string;
+  notes?: string;
 }
 
 export interface BudgetLineItem {
