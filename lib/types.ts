@@ -49,6 +49,8 @@ export interface CommStep {
   description?: string;
   date: string; // ISO YYYY-MM-DD
   done: boolean;
+  dismissed?: boolean;   // reminder weggeklikt op dashboard (stap zelf blijft bestaan)
+  snoozeUntil?: string;  // ISO — reminder verborgen tot deze datum
 }
 
 export interface EventBriefing {

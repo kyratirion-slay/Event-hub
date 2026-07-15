@@ -5,8 +5,8 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import EventCard from "@/components/EventCard";
 import { useStore } from "@/lib/store";
-import { daysFromToday, formatIsoDate } from "@/lib/communication";
-import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2, Send, ChevronRight } from "lucide-react";
+import { daysFromToday, isoDaysFromNow } from "@/lib/communication";
+import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2, ChevronRight } from "lucide-react";
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
 
@@ -284,58 +284,34 @@ function GlobalTodosWidget() {
   );
 }
 
-// ─── COMMUNICATIE-ALERTS ─────────────────────────────────────────────────────
+// ─── COMMUNICATIE-REMINDERS ──────────────────────────────────────────────────
+//
+// Verschijnen pas op de dag zelf (of wanneer te laat). Blijven staan tot de
+// gebruiker afvinkt, wegklikt (kruisje) of uitstelt met 1/3/7 dagen.
 
 function CommAlertsBlock() {
   const store = useStore();
 
-  // Alle open communicatiestappen van actieve events
-  const allOpen = store.events
+  const reminders = store.events
     .filter((e) => e.status !== "afgerond")
     .flatMap((e) =>
       (e.commSteps ?? [])
-        .filter((s) => !s.done)
+        .filter((s) => !s.done && !s.dismissed)
         .map((s) => ({ ...s, eventId: e.id, eventName: e.name, coverColor: e.coverColor, days: daysFromToday(s.date) }))
     )
+    // Op de dag zelf of te laat — en niet gesnoozed naar de toekomst
+    .filter((s) => s.days <= 0 && (!s.snoozeUntil || daysFromToday(s.snoozeUntil) <= 0))
     .sort((a, b) => a.days - b.days);
 
-  const alerts = allOpen.filter((s) => s.days <= 7);
-
-  // Geen enkel communicatieplan met open stappen → niets tonen
-  if (allOpen.length === 0) return null;
-
-  // Wel plannen, maar niets urgent → rustige "op koers"-regel met de eerstvolgende stap
-  if (alerts.length === 0) {
-    const next = allOpen[0];
-    return (
-      <Link
-        href="/communicatie"
-        className="flex items-center gap-3 rounded-xl px-5 py-3 mb-8 hover:opacity-90 transition-opacity"
-        style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
-      >
-        <Send size={13} style={{ color: "var(--accent)" }} />
-        <span className="text-sm" style={{ color: "var(--muted)" }}>
-          Communicatie op koers — eerstvolgende stap:
-        </span>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-          style={{ backgroundColor: `${next.coverColor}20`, color: next.coverColor }}
-        >
-          {next.eventName}
-        </span>
-        <span className="flex-1 text-sm truncate" style={{ color: "var(--foreground)" }}>{next.title}</span>
-        <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>
-          {formatIsoDate(next.date)} · over {next.days} {next.days === 1 ? "dag" : "dagen"}
-        </span>
-        <ChevronRight size={14} style={{ color: "var(--muted)" }} />
-      </Link>
-    );
-  }
+  if (reminders.length === 0) return null;
 
   function badge(days: number): { text: string; color: string } {
     if (days < 0) return { text: days === -1 ? "1 dag te laat" : `${-days} dagen te laat`, color: "#dc2626" };
-    if (days === 0) return { text: "vandaag", color: "#d97706" };
-    return { text: days === 1 ? "morgen" : `over ${days} dagen`, color: "#d97706" };
+    return { text: "vandaag", color: "#d97706" };
+  }
+
+  function snooze(eventId: number, stepId: number, days: number) {
+    store.updateCommStep(eventId, stepId, { snoozeUntil: isoDaysFromNow(days) });
   }
 
   return (
@@ -349,24 +325,24 @@ function CommAlertsBlock() {
         style={{ borderColor: "var(--border)", backgroundColor: "rgba(232,111,163,0.08)" }}
       >
         <div className="flex items-center gap-2">
-          <Send size={14} style={{ color: "var(--accent)" }} />
+          <Bell size={14} style={{ color: "var(--accent)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-            Actie nodig — communicatie
+            Reminders — communicatie
           </span>
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "var(--accent)", color: "#fff" }}>
-            {alerts.length}
+            {reminders.length}
           </span>
         </div>
         <ChevronRight size={14} style={{ color: "var(--accent)" }} />
       </Link>
       <div>
-        {alerts.map((a, i) => {
+        {reminders.map((a, i) => {
           const b = badge(a.days);
           return (
             <div
               key={`${a.eventId}-${a.id}`}
-              className="flex items-center gap-3 px-5 py-2.5"
-              style={{ borderBottom: i < alerts.length - 1 ? "1px solid var(--border)" : "none" }}
+              className="flex items-center gap-3 px-5 py-2.5 group/rem"
+              style={{ borderBottom: i < reminders.length - 1 ? "1px solid var(--border)" : "none" }}
             >
               <button
                 onClick={() => store.toggleCommStep(a.eventId, a.id)}
@@ -382,10 +358,34 @@ function CommAlertsBlock() {
                 {a.eventName}
               </span>
               <span className="flex-1 text-sm min-w-0" style={{ color: "var(--foreground)" }}>{a.title}</span>
-              <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{formatIsoDate(a.date)}</span>
               <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: `${b.color}18`, color: b.color }}>
                 {b.text}
               </span>
+
+              {/* Uitstellen */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs mr-0.5" style={{ color: "var(--muted)" }}>uitstellen:</span>
+                {[1, 3, 7].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => snooze(a.eventId, a.id, n)}
+                    className="text-xs px-1.5 py-0.5 rounded-md transition-colors hover:opacity-70"
+                    style={{ border: "1px solid var(--border)", color: "var(--muted)", backgroundColor: "var(--background)" }}
+                    title={`Herinner me over ${n} ${n === 1 ? "dag" : "dagen"} opnieuw`}
+                  >
+                    +{n}d
+                  </button>
+                ))}
+              </div>
+
+              {/* Wegklikken */}
+              <button
+                onClick={() => store.updateCommStep(a.eventId, a.id, { dismissed: true })}
+                className="shrink-0 opacity-40 hover:opacity-100 transition-opacity"
+                title="Reminder wegklikken (stap blijft in het plan staan)"
+              >
+                <X size={14} style={{ color: "var(--muted)" }} />
+              </button>
             </div>
           );
         })}

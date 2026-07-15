@@ -55,6 +55,11 @@ function addDays(d: Date, n: number): Date {
   return c;
 }
 
+/** ISO-datum van vandaag + n dagen (voor snoozen van reminders) */
+export function isoDaysFromNow(n: number): string {
+  return toIso(addDays(new Date(), n));
+}
+
 // ─── Stappenplan-template ───────────────────────────────────────────────────
 //
 // Genereert een communicatielijn rond twee ankers: de uitnodigingsdatum en de

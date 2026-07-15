@@ -92,11 +92,11 @@ function StepRow({ step, eventId }: { step: CommStep; eventId: number }) {
         )}
       </div>
 
-      {/* Date */}
+      {/* Date — datum verschuiven reset een eerdere snooze/wegklik van de reminder */}
       <input
         type="date"
         value={step.date}
-        onChange={(e) => { if (e.target.value) store.updateCommStep(eventId, step.id, { date: e.target.value }); }}
+        onChange={(e) => { if (e.target.value) store.updateCommStep(eventId, step.id, { date: e.target.value, snoozeUntil: undefined, dismissed: undefined }); }}
         className="shrink-0 text-xs rounded-lg px-2 py-1 outline-none"
         style={dateInputCss}
       />
