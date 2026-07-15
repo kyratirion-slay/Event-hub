@@ -18,12 +18,21 @@ Nederlandstalige eventmanagement-webapp (werkplek voor een eventmanager). Alle U
 |---|---|---|
 | `/` | `app/page.tsx` | Dashboard: stats, eventgrid met zoekbalk, takenwidget (2/5 breed) met alle open todo's gegroepeerd per event in de eventkleur |
 | `/events` | `app/events/page.tsx` | Eventoverzicht + modal voor nieuw event (naam, datum, tijden, locatie, gasten, kleur) |
-| `/events/[id]` | `app/events/[id]/page.tsx` (~1800 regels) | Eventdetail met tabs: Programma, To do's, Uitwerking (briefing), Budget, Tijdlijn, Notities (zwevende notitievensters) |
+| `/events/[id]` | `app/events/[id]/page.tsx` (~1800 regels) | Eventdetail met tabs: Programma, To do's, Uitwerking (briefing), Budget, Tijdlijn, Communicatie, Notities (zwevende notitievensters) |
 | `/vergaderingen` | `app/vergaderingen/page.tsx` | "Notities" in de sidebar: rich-text notities per event/subcategorie (contenteditable + execCommand) |
+| `/communicatie` | `app/communicatie/page.tsx` | Overzicht van de communicatielijnen van álle events (zelfde data als de Communicatie-tab per event; gedeeld component `components/CommPlan.tsx`) |
 | `/leveranciers` | `app/leveranciers/page.tsx` | Leveranciersdatabase met categorieën, filters, detailpaneel |
 | `/draaiboeken`, `/mail` | bestaan nog als code, maar zijn **uit de sidebar verwijderd** (bewust; gebruiker wilde ze niet meer). Mailgenerator (`app/api/generate-mail/route.ts`) vereist `ANTHROPIC_API_KEY` in `.env.local` en werd nooit werkend opgeleverd. |
 
-Sidebar (`components/Sidebar.tsx`) bevat alleen: Dashboard, Events, Notities, Leveranciers.
+Sidebar (`components/Sidebar.tsx`) bevat alleen: Dashboard, Events, Notities, Communicatie, Leveranciers.
+
+## Communicatielijn-feature
+
+Per event een stappenplan voor uitnodigingen/reminders richting genodigden:
+- `Event.inviteDate?` (ISO) + `Event.commSteps?: CommStep[]` (`lib/types.ts`); stappen hebben ISO-datums (`YYYY-MM-DD`), i.t.t. de rest van de app die Nederlandse datumstrings gebruikt.
+- Template-generator + datumhelpers in `lib/communication.ts`: `generateCommSteps(inviteIso, eventDateStr)` genereert stappen rond twee ankers (uitnodigingsdatum, eventdatum); reminders schalen mee met de lengte van het traject en worden geklemd vóór de RSVP-deadline.
+- Gedeeld component `components/CommPlan.tsx` (`CommPlanEditor`) wordt gebruikt door zowel de Communicatie-tab in het event als `/communicatie` — beide plekken tonen dus automatisch dezelfde data.
+- Dashboard (`app/page.tsx`) heeft een `CommAlertsBlock`: stappen die niet af zijn en binnen 7 dagen vallen (of te laat zijn) verschijnen bovenaan met eventkleur en badge (te laat = rood, vandaag/deze week = amber). Dit zijn de "reminders" — er is geen server, dus geen e-mail/push.
 
 ## Belangrijke datamodel-details (`lib/types.ts`)
 

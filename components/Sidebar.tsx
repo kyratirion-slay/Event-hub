@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Calendar,
-  NotebookPen, Building2,
+  NotebookPen, Building2, Send,
 } from "lucide-react";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",   href: "/" },
+  { icon: LayoutDashboard, label: "Dashboard",    href: "/" },
   { icon: Calendar,        label: "Events",       href: "/events" },
   { icon: NotebookPen,     label: "Notities",     href: "/vergaderingen" },
+  { icon: Send,            label: "Communicatie", href: "/communicatie" },
   { icon: Building2,       label: "Leveranciers", href: "/leveranciers" },
 ];
 

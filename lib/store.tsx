@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { events as initialEvents, suppliers as initialSuppliers, defaultEventLocatieSubcats, defaultSprekerSubcats } from "./mockData";
 import type {
-  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, ProgramDay, Status, NoteWindow, Supplier,
+  Event, Todo, BudgetLineItem, EventBriefing, TimelineItem, ProgramItem, ProgramDay, Status, NoteWindow, Supplier, CommStep,
 } from "./types";
 
 // Bump this to force localStorage reset when data structure changes
@@ -42,6 +42,12 @@ interface StoreContextType {
   addBudgetItem(eventId: number, categoryId: number): void;
   updateBudgetItem(eventId: number, categoryId: number, itemId: number, updates: Partial<Omit<BudgetLineItem, "id">>): void;
   deleteBudgetItem(eventId: number, categoryId: number, itemId: number): void;
+  // Communicatie
+  setCommPlan(eventId: number, inviteDate: string | undefined, steps: Omit<CommStep, "id">[]): void;
+  addCommStep(eventId: number, step: Omit<CommStep, "id">): void;
+  updateCommStep(eventId: number, stepId: number, updates: Partial<Omit<CommStep, "id">>): void;
+  deleteCommStep(eventId: number, stepId: number): void;
+  toggleCommStep(eventId: number, stepId: number): void;
   // Note windows
   addNoteWindow(eventId: number, win: Omit<NoteWindow, "id">): void;
   updateNoteWindow(eventId: number, winId: number, updates: Partial<Omit<NoteWindow, "id">>): void;
@@ -373,6 +379,54 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  // ─── Communicatie ──────────────────────────────────────────────────────
+
+  const setCommPlan = useCallback((eventId: number, inviteDate: string | undefined, steps: Omit<CommStep, "id">[]) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        inviteDate,
+        commSteps: steps.map((s, i) => ({ ...s, id: i + 1 })),
+      }))
+    );
+  }, []);
+
+  const addCommStep = useCallback((eventId: number, step: Omit<CommStep, "id">) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        commSteps: [...(e.commSteps ?? []), { ...step, id: nextId(e.commSteps ?? []) }],
+      }))
+    );
+  }, []);
+
+  const updateCommStep = useCallback((eventId: number, stepId: number, updates: Partial<Omit<CommStep, "id">>) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        commSteps: (e.commSteps ?? []).map((s) => (s.id === stepId ? { ...s, ...updates } : s)),
+      }))
+    );
+  }, []);
+
+  const deleteCommStep = useCallback((eventId: number, stepId: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        commSteps: (e.commSteps ?? []).filter((s) => s.id !== stepId),
+      }))
+    );
+  }, []);
+
+  const toggleCommStep = useCallback((eventId: number, stepId: number) => {
+    setEvents((prev) =>
+      updateEvent(prev, eventId, (e) => ({
+        ...e,
+        commSteps: (e.commSteps ?? []).map((s) => (s.id === stepId ? { ...s, done: !s.done } : s)),
+      }))
+    );
+  }, []);
+
   // ─── Note windows ──────────────────────────────────────────────────────
 
   const addNoteWindow = useCallback((eventId: number, win: Omit<NoteWindow, "id">) => {
@@ -487,6 +541,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateBriefingField, updateBriefingOrder,
       updateTotalBudget, updateBudgetIsIncl, addBudgetCategory, renameBudgetCategory, deleteBudgetCategory,
       addBudgetItem, updateBudgetItem, deleteBudgetItem,
+      setCommPlan, addCommStep, updateCommStep, deleteCommStep, toggleCommStep,
       addNoteWindow, updateNoteWindow, deleteNoteWindow,
       toggleTimelineItem, addTimelineItem, updateTimelineItem, deleteTimelineItem, adoptSuggestion,
       suppliers, addSupplier, updateSupplier, deleteSupplier,

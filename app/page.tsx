@@ -5,7 +5,8 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import EventCard from "@/components/EventCard";
 import { useStore } from "@/lib/store";
-import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2 } from "lucide-react";
+import { daysFromToday, formatIsoDate } from "@/lib/communication";
+import { Plus, Search, Bell, X, Circle, CheckCircle2, Trash2, Send, ChevronRight } from "lucide-react";
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
 
@@ -28,18 +29,6 @@ function parseEventDate(dateStr: string): Date | null {
   }
   if (day === 0 || month === -1) return null;
   return new Date(year, month, day);
-}
-
-function parseDutchDeadline(deadline: string | undefined, eventDate: string): Date | null {
-  if (!deadline) return null;
-  const parts = deadline.trim().split(" ");
-  if (parts.length < 2) return null;
-  const day = parseInt(parts[0], 10);
-  const mon = DUTCH_MONTHS[parts[1].toLowerCase()];
-  if (isNaN(day) || mon === undefined) return null;
-  const eventParts = eventDate.split(" ");
-  const year = eventParts.length >= 3 ? parseInt(eventParts[2], 10) : new Date().getFullYear();
-  return new Date(year, mon, day);
 }
 
 // ─── GLOBAL TODOS WIDGET ──────────────────────────────────────────────────────
@@ -295,6 +284,84 @@ function GlobalTodosWidget() {
   );
 }
 
+// ─── COMMUNICATIE-ALERTS ─────────────────────────────────────────────────────
+
+function CommAlertsBlock() {
+  const store = useStore();
+
+  const alerts = store.events
+    .filter((e) => e.status !== "afgerond")
+    .flatMap((e) =>
+      (e.commSteps ?? [])
+        .filter((s) => !s.done && daysFromToday(s.date) <= 7)
+        .map((s) => ({ ...s, eventId: e.id, eventName: e.name, coverColor: e.coverColor, days: daysFromToday(s.date) }))
+    )
+    .sort((a, b) => a.days - b.days);
+
+  if (alerts.length === 0) return null;
+
+  function badge(days: number): { text: string; color: string } {
+    if (days < 0) return { text: days === -1 ? "1 dag te laat" : `${-days} dagen te laat`, color: "#dc2626" };
+    if (days === 0) return { text: "vandaag", color: "#d97706" };
+    return { text: days === 1 ? "morgen" : `over ${days} dagen`, color: "#d97706" };
+  }
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden mb-8"
+      style={{ border: "1.5px solid var(--accent)", backgroundColor: "var(--card)" }}
+    >
+      <Link
+        href="/communicatie"
+        className="flex items-center justify-between px-5 py-3 border-b hover:opacity-90 transition-opacity"
+        style={{ borderColor: "var(--border)", backgroundColor: "rgba(232,111,163,0.08)" }}
+      >
+        <div className="flex items-center gap-2">
+          <Send size={14} style={{ color: "var(--accent)" }} />
+          <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+            Actie nodig — communicatie
+          </span>
+          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "var(--accent)", color: "#fff" }}>
+            {alerts.length}
+          </span>
+        </div>
+        <ChevronRight size={14} style={{ color: "var(--accent)" }} />
+      </Link>
+      <div>
+        {alerts.map((a, i) => {
+          const b = badge(a.days);
+          return (
+            <div
+              key={`${a.eventId}-${a.id}`}
+              className="flex items-center gap-3 px-5 py-2.5"
+              style={{ borderBottom: i < alerts.length - 1 ? "1px solid var(--border)" : "none" }}
+            >
+              <button
+                onClick={() => store.toggleCommStep(a.eventId, a.id)}
+                className="shrink-0 transition-opacity hover:opacity-70"
+                title="Markeer als gedaan"
+              >
+                <Circle size={14} style={{ color: b.color }} />
+              </button>
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                style={{ backgroundColor: `${a.coverColor}20`, color: a.coverColor }}
+              >
+                {a.eventName}
+              </span>
+              <span className="flex-1 text-sm min-w-0" style={{ color: "var(--foreground)" }}>{a.title}</span>
+              <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{formatIsoDate(a.date)}</span>
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: `${b.color}18`, color: b.color }}>
+                {b.text}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -385,6 +452,9 @@ export default function DashboardPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-8 py-7">
+
+          {/* Communicatie-acties die aandacht vragen */}
+          <CommAlertsBlock />
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-8">

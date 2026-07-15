@@ -43,6 +43,14 @@ export interface TimelineItem {
   linkedTodoId?: number;
 }
 
+export interface CommStep {
+  id: number;
+  title: string;
+  description?: string;
+  date: string; // ISO YYYY-MM-DD
+  done: boolean;
+}
+
 export interface EventBriefing {
   concept: string;
   doelgroep: string;
@@ -80,6 +88,8 @@ export interface Event {
   coverColor: string;
   totalBudget: number;
   budgetIsIncl?: boolean;
+  inviteDate?: string; // ISO YYYY-MM-DD — wanneer de uitnodiging de deur uit gaat
+  commSteps?: CommStep[];
   briefing: EventBriefing;
   program: ProgramDay[];
   todos: Todo[];

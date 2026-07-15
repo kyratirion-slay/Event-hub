@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import CommPlanEditor from "@/components/CommPlan";
 import { useStore } from "@/lib/store";
 import { generateSuggestions } from "@/lib/suggestions";
 import type { EventBriefing, TimelineItem, NoteWindow, ProgramDay } from "@/lib/types";
@@ -139,7 +140,7 @@ const statusConfig = {
   concept:            { label: "Concept",            bg: "rgba(167,139,250,0.12)", text: "#5b21b6", dot: "#8b5cf6" },
 } as const;
 
-const TABS = ["Programma", "To do's", "Uitwerking", "Budget", "Tijdlijn", "Notities"] as const;
+const TABS = ["Programma", "To do's", "Uitwerking", "Budget", "Tijdlijn", "Communicatie", "Notities"] as const;
 type Tab = typeof TABS[number];
 
 function formatEuro(n: number) {
@@ -1601,7 +1602,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   // Full-width tabs (no summary sidebar)
-  const fullWidthTabs: Tab[] = ["Uitwerking", "Budget", "Tijdlijn", "Notities"];
+  const fullWidthTabs: Tab[] = ["Uitwerking", "Budget", "Tijdlijn", "Communicatie", "Notities"];
   const isFullWidth = fullWidthTabs.includes(activeTab);
   const isCanvas = activeTab === "Notities";
 
@@ -1805,6 +1806,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               {activeTab === "Uitwerking" && <UitwerkingTab eventId={event.id} />}
               {activeTab === "Budget"     && <BudgetTab eventId={event.id} />}
               {activeTab === "Tijdlijn"   && <TijdlijnTab eventId={event.id} />}
+              {activeTab === "Communicatie" && (
+                <div className="max-w-3xl">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest mb-5" style={{ color: "var(--muted)" }}>
+                    Communicatielijn
+                  </h2>
+                  <CommPlanEditor eventId={event.id} />
+                </div>
+              )}
               {activeTab === "Notities"   && <NotitiesTab eventId={event.id} />}
             </div>
 
