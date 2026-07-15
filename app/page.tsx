@@ -289,16 +289,48 @@ function GlobalTodosWidget() {
 function CommAlertsBlock() {
   const store = useStore();
 
-  const alerts = store.events
+  // Alle open communicatiestappen van actieve events
+  const allOpen = store.events
     .filter((e) => e.status !== "afgerond")
     .flatMap((e) =>
       (e.commSteps ?? [])
-        .filter((s) => !s.done && daysFromToday(s.date) <= 7)
+        .filter((s) => !s.done)
         .map((s) => ({ ...s, eventId: e.id, eventName: e.name, coverColor: e.coverColor, days: daysFromToday(s.date) }))
     )
     .sort((a, b) => a.days - b.days);
 
-  if (alerts.length === 0) return null;
+  const alerts = allOpen.filter((s) => s.days <= 7);
+
+  // Geen enkel communicatieplan met open stappen → niets tonen
+  if (allOpen.length === 0) return null;
+
+  // Wel plannen, maar niets urgent → rustige "op koers"-regel met de eerstvolgende stap
+  if (alerts.length === 0) {
+    const next = allOpen[0];
+    return (
+      <Link
+        href="/communicatie"
+        className="flex items-center gap-3 rounded-xl px-5 py-3 mb-8 hover:opacity-90 transition-opacity"
+        style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
+      >
+        <Send size={13} style={{ color: "var(--accent)" }} />
+        <span className="text-sm" style={{ color: "var(--muted)" }}>
+          Communicatie op koers — eerstvolgende stap:
+        </span>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+          style={{ backgroundColor: `${next.coverColor}20`, color: next.coverColor }}
+        >
+          {next.eventName}
+        </span>
+        <span className="flex-1 text-sm truncate" style={{ color: "var(--foreground)" }}>{next.title}</span>
+        <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>
+          {formatIsoDate(next.date)} · over {next.days} {next.days === 1 ? "dag" : "dagen"}
+        </span>
+        <ChevronRight size={14} style={{ color: "var(--muted)" }} />
+      </Link>
+    );
+  }
 
   function badge(days: number): { text: string; color: string } {
     if (days < 0) return { text: days === -1 ? "1 dag te laat" : `${-days} dagen te laat`, color: "#dc2626" };
