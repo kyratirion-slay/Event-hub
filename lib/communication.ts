@@ -102,3 +102,43 @@ export function generateCommSteps(inviteIso: string, eventDateStr: string): Omit
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .map((s) => ({ title: s.title, description: s.description, date: toIso(s.date), done: false }));
 }
+
+// ─── Agenda-export (.ics) ───────────────────────────────────────────────────
+//
+// De app heeft geen server en kan dus zelf geen e-mail sturen. Via een
+// .ics-export komen de stappen als agenda-items (met herinnering om 9:00)
+// in Outlook/Google/Apple Agenda — die sturen vervolgens zelf de melding
+// of e-mail, afhankelijk van de agenda-instellingen van de gebruiker.
+
+export function commStepsToIcs(eventName: string, steps: CommStep[]): string {
+  const esc = (s: string) =>
+    s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+  const vevents = steps.map((s) => {
+    const d = s.date.replace(/-/g, "");
+    return [
+      "BEGIN:VEVENT",
+      `UID:eventhub-${d}-${s.id}-${eventName.replace(/[^a-zA-Z0-9]/g, "")}@event-hub`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${d}`,
+      `SUMMARY:${esc(`${eventName} — ${s.title}`)}`,
+      s.description ? `DESCRIPTION:${esc(s.description)}` : "",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:${esc(s.title)}`,
+      "TRIGGER:PT9H",
+      "END:VALARM",
+      "END:VEVENT",
+    ].filter(Boolean).join("\r\n");
+  });
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Event Hub//Communicatielijn//NL",
+    "CALSCALE:GREGORIAN",
+    ...vevents,
+    "END:VCALENDAR",
+  ].join("\r\n");
+}

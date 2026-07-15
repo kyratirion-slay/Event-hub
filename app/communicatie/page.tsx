@@ -1,26 +1,39 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import CommPlanEditor from "@/components/CommPlan";
 import { useStore } from "@/lib/store";
-import { daysFromToday } from "@/lib/communication";
-import { Send, ChevronRight } from "lucide-react";
+import { daysFromToday, formatIsoDate } from "@/lib/communication";
+import type { Event } from "@/lib/types";
+import { Send, ChevronRight, ChevronDown, ArrowUpRight } from "lucide-react";
+
+// Hoe urgent is het meest urgente open stapje van dit event? (Infinity = geen open stappen)
+function urgency(e: Event): number {
+  const open = (e.commSteps ?? []).filter((s) => !s.done);
+  if (e.commSteps === undefined || open.length === 0) return Infinity;
+  return Math.min(...open.map((s) => daysFromToday(s.date)));
+}
 
 export default function CommunicatiePage() {
   const store = useStore();
 
   const activeEvents = store.events.filter((e) => e.status !== "afgerond");
+  const sorted = [...activeEvents].sort((a, b) => urgency(a) - urgency(b));
 
-  // Sorteer: events met de meest urgente open stap eerst, events zonder plan achteraan
-  const sorted = [...activeEvents].sort((a, b) => {
-    const urgency = (e: typeof a) => {
-      const open = (e.commSteps ?? []).filter((s) => !s.done);
-      if (e.commSteps === undefined || open.length === 0) return Infinity;
-      return Math.min(...open.map((s) => daysFromToday(s.date)));
-    };
-    return urgency(a) - urgency(b);
-  });
+  // Standaard alleen events met een stap binnen 7 dagen (of te laat) opengeklapt
+  const [openIds, setOpenIds] = useState<Set<number>>(
+    () => new Set(activeEvents.filter((e) => urgency(e) <= 7).map((e) => e.id))
+  );
+
+  function toggle(id: number) {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div className="flex h-full min-h-screen">
@@ -53,25 +66,80 @@ export default function CommunicatiePage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-8 max-w-3xl">
-              {sorted.map((event) => (
-                <section key={event.id}>
-                  {/* Event header — kleur van het event voor duidelijke scheiding */}
-                  <Link
-                    href={`/events/${event.id}`}
-                    className="flex items-center gap-3 rounded-t-xl px-5 py-3 hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: `${event.coverColor}1a`, border: `1px solid ${event.coverColor}40`, borderBottom: "none" }}
-                  >
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: event.coverColor }} />
-                    <span className="text-sm font-bold flex-1" style={{ color: event.coverColor }}>
-                      {event.name}
-                    </span>
-                    <span className="text-xs" style={{ color: "var(--muted)" }}>{event.date}</span>
-                    <ChevronRight size={14} style={{ color: event.coverColor }} />
-                  </Link>
-                  <CommPlanEditor eventId={event.id} />
-                </section>
-              ))}
+            <div className="space-y-4 max-w-3xl">
+              {sorted.map((event) => {
+                const isOpen = openIds.has(event.id);
+                const openSteps = (event.commSteps ?? [])
+                  .filter((s) => !s.done)
+                  .sort((a, b) => a.date.localeCompare(b.date));
+                const next = openSteps[0];
+                const urg = urgency(event);
+
+                return (
+                  <section key={event.id}>
+                    {/* Klikbare event header — in/uitklappen */}
+                    <div
+                      onClick={() => toggle(event.id)}
+                      className={`w-full flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none transition-opacity hover:opacity-90 ${isOpen ? "rounded-t-xl" : "rounded-xl"}`}
+                      style={{
+                        backgroundColor: `${event.coverColor}1a`,
+                        border: `1px solid ${event.coverColor}40`,
+                        borderBottom: isOpen ? "none" : `1px solid ${event.coverColor}40`,
+                      }}
+                    >
+                      {isOpen
+                        ? <ChevronDown size={15} className="shrink-0" style={{ color: event.coverColor }} />
+                        : <ChevronRight size={15} className="shrink-0" style={{ color: event.coverColor }} />
+                      }
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: event.coverColor }} />
+                      <span className="text-sm font-bold shrink-0" style={{ color: event.coverColor }}>
+                        {event.name}
+                      </span>
+
+                      {/* Samenvatting bij ingeklapt */}
+                      {!isOpen && (
+                        <span className="flex-1 text-xs text-left truncate" style={{ color: "var(--muted)" }}>
+                          {event.commSteps === undefined
+                            ? "Nog geen communicatieplan"
+                            : openSteps.length === 0
+                              ? "Alles afgerond ✓"
+                              : <>Volgende: {next.title} · {formatIsoDate(next.date)}</>
+                          }
+                        </span>
+                      )}
+                      {isOpen && <span className="flex-1" />}
+
+                      {/* Badges rechts */}
+                      {openSteps.length > 0 && (
+                        <span
+                          className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                          style={
+                            urg < 0
+                              ? { backgroundColor: "rgba(220,38,38,0.12)", color: "#dc2626" }
+                              : urg <= 7
+                                ? { backgroundColor: "rgba(217,119,6,0.12)", color: "#d97706" }
+                                : { backgroundColor: `${event.coverColor}30`, color: event.coverColor }
+                          }
+                        >
+                          {urg < 0 ? "te laat" : urg === 0 ? "vandaag" : `${openSteps.length} open`}
+                        </span>
+                      )}
+                      <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{event.date}</span>
+                      <Link
+                        href={`/events/${event.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0 hover:opacity-70 transition-opacity"
+                        title="Naar event"
+                      >
+                        <ArrowUpRight size={14} style={{ color: event.coverColor }} />
+                      </Link>
+                    </div>
+
+                    {/* Uitgeklapt: het volledige plan */}
+                    {isOpen && <CommPlanEditor eventId={event.id} />}
+                  </section>
+                );
+              })}
             </div>
           )}
         </div>

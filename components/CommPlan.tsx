@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { generateCommSteps, formatIsoDate, daysFromToday, toIso } from "@/lib/communication";
+import { generateCommSteps, formatIsoDate, daysFromToday, toIso, commStepsToIcs } from "@/lib/communication";
 import type { CommStep } from "@/lib/types";
-import { Plus, Trash2, Circle, CheckCircle2, Send, RefreshCw, Pencil } from "lucide-react";
+import { Plus, Trash2, Circle, CheckCircle2, Send, RefreshCw, Pencil, CalendarPlus } from "lucide-react";
 
 // Status van een stap → kleur + badge-tekst
 function stepStatus(step: CommStep): { dot: string; badge?: { text: string; color: string } } {
@@ -144,6 +144,19 @@ export default function CommPlanEditor({ eventId }: { eventId: number }) {
     setNewTitle(""); setNewDesc(""); setAdding(false);
   }
 
+  function exportIcs() {
+    if (!event) return;
+    const open = steps.filter((s) => !s.done);
+    if (open.length === 0) return;
+    const blob = new Blob([commStepsToIcs(event.name, open)], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `communicatie-${event.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ── Nog geen plan: setup ──
   if (!hasPlan) {
     return (
@@ -207,6 +220,16 @@ export default function CommPlanEditor({ eventId }: { eventId: number }) {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {steps.some((s) => !s.done) && (
+            <button
+              onClick={exportIcs}
+              className="flex items-center gap-1 text-xs"
+              style={{ color: "var(--muted)" }}
+              title="Download agenda-bestand (.ics) — importeer in Outlook/Google/Apple Agenda voor herinneringen op je telefoon of mail"
+            >
+              <CalendarPlus size={11} /> Agenda
+            </button>
+          )}
           <button
             onClick={regenerate}
             disabled={!inviteDraft}

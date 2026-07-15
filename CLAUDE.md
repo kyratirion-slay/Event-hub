@@ -33,6 +33,8 @@ Per event een stappenplan voor uitnodigingen/reminders richting genodigden:
 - Template-generator + datumhelpers in `lib/communication.ts`: `generateCommSteps(inviteIso, eventDateStr)` genereert stappen rond twee ankers (uitnodigingsdatum, eventdatum); reminders schalen mee met de lengte van het traject en worden geklemd vóór de RSVP-deadline.
 - Gedeeld component `components/CommPlan.tsx` (`CommPlanEditor`) wordt gebruikt door zowel de Communicatie-tab in het event als `/communicatie` — beide plekken tonen dus automatisch dezelfde data.
 - Dashboard (`app/page.tsx`) heeft een `CommAlertsBlock`: stappen die niet af zijn en binnen 7 dagen vallen (of te laat zijn) verschijnen bovenaan met eventkleur en badge (te laat = rood, vandaag/deze week = amber). Dit zijn de "reminders" — er is geen server, dus geen e-mail/push.
+- Voor échte meldingen: "Agenda"-knop in `CommPlanEditor` downloadt een `.ics` (`commStepsToIcs` in `lib/communication.ts`) met alle open stappen als agenda-items met alarm om 9:00; gebruiker importeert die in Outlook/Google/Apple Agenda.
+- `/communicatie` heeft in-/uitklapbare panelen per event; standaard alleen open bij events met een stap binnen 7 dagen. Ingeklapt toont de header de eerstvolgende stap.
 
 ## Belangrijke datamodel-details (`lib/types.ts`)
 
